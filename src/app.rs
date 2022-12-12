@@ -1,19 +1,7 @@
 use crate::entities;
 use crate::repositories::Repository;
+use crate::values::{BookmarkInput, BookmarkQuery};
 use std::sync::Arc;
-
-type BookmarkId = String;
-
-#[derive(std::fmt::Debug)]
-pub struct BookmarkInput {
-    pub url: String,
-    pub title: String,
-}
-
-#[derive(std::fmt::Debug)]
-pub struct BookmarkQuery {
-    pub id: BookmarkId,
-}
 
 pub fn read_bookmark(
     bookmark_query: BookmarkQuery,

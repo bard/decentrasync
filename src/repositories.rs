@@ -1,5 +1,5 @@
-use crate::app::BookmarkQuery;
 use crate::entities::Bookmark;
+use crate::values::BookmarkQuery;
 use std::sync::Mutex;
 
 pub trait Repository: Sync {
