@@ -1,11 +1,8 @@
-mod adapters;
-mod entities;
-mod repositories;
-mod values;
-
 use std::sync::Arc;
 
+use bookmarks::adapters::{http_api, memory_repository::MemoryRepository};
+
 fn main() {
-    let repo = Arc::new(repositories::InMemoryRepository::new());
-    adapters::http::run(repo);
+    let repo = Arc::new(MemoryRepository::new());
+    http_api::run(repo);
 }

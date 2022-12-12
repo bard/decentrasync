@@ -1,1 +1,2 @@
-pub mod http;
+pub mod http_api;
+pub mod memory_repository;

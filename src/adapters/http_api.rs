@@ -1,6 +1,7 @@
-use crate::repositories::Repository;
 use rouille::router;
 use std::sync::Arc;
+
+use crate::app::Repository;
 
 pub fn run(_repo: Arc<dyn Repository>) {
     rouille::start_server("localhost:9111", move |req| -> rouille::Response {

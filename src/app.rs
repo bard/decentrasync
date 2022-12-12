@@ -1,12 +1,34 @@
-use crate::entities;
-use crate::repositories::Repository;
-use crate::values::{BookmarkInput, BookmarkQuery};
 use std::sync::Arc;
+
+#[derive(std::fmt::Debug, PartialEq, Clone)]
+pub struct Bookmark {
+    pub id: String,
+    pub url: String,
+    pub title: String,
+}
+
+type BookmarkId = String;
+
+#[derive(std::fmt::Debug)]
+pub struct BookmarkInput {
+    pub url: String,
+    pub title: String,
+}
+
+#[derive(std::fmt::Debug)]
+pub struct BookmarkQuery {
+    pub id: BookmarkId,
+}
+
+pub trait Repository: Sync {
+    fn insert(&self, bookmark: Bookmark) -> Result<Bookmark, ()>;
+    fn fetch_first(&self, query: BookmarkQuery) -> Result<Bookmark, ()>;
+}
 
 pub fn read_bookmark(
     bookmark_query: BookmarkQuery,
     repo: Arc<dyn Repository>,
-) -> Result<entities::Bookmark, ()> {
+) -> Result<Bookmark, ()> {
     repo.fetch_first(bookmark_query)
 }
 
@@ -16,7 +38,7 @@ pub fn create_bookmark(
     bookmark_input: BookmarkInput,
     repo: Arc<dyn Repository>,
 ) -> Result<String, ()> {
-    let _res = repo.insert(entities::Bookmark {
+    let _res = repo.insert(Bookmark {
         id: bookmark_input.url.clone(), // XXX temporary
         url: bookmark_input.url.clone(),
         title: bookmark_input.title,
@@ -27,12 +49,13 @@ pub fn create_bookmark(
 
 #[cfg(test)]
 mod tests {
+    use crate::adapters::memory_repository::MemoryRepository;
+
     use super::*;
-    use crate::repositories::InMemoryRepository;
 
     #[test]
     fn test_created_bookmark_is_saved_in_repository() {
-        let repo = Arc::new(InMemoryRepository::new());
+        let repo = Arc::new(MemoryRepository::new());
         let id = create_bookmark(
             BookmarkInput {
                 url: "http://bar".to_string(),
@@ -46,7 +69,7 @@ mod tests {
 
         assert_eq!(
             bookmark,
-            entities::Bookmark {
+            Bookmark {
                 id,
                 url: "http://bar".to_string(),
                 title: "bar".to_string(),

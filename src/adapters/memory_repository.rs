@@ -1,24 +1,19 @@
-use crate::entities::Bookmark;
-use crate::values::BookmarkQuery;
 use std::sync::Mutex;
 
-pub trait Repository: Sync {
-    fn insert(&self, bookmark: Bookmark) -> Result<Bookmark, ()>;
-    fn fetch_first(&self, query: BookmarkQuery) -> Result<Bookmark, ()>;
-}
+use crate::app::{Bookmark, BookmarkQuery, Repository};
 
-pub struct InMemoryRepository {
+pub struct MemoryRepository {
     bookmarks: Mutex<Vec<Bookmark>>,
 }
 
-impl InMemoryRepository {
+impl MemoryRepository {
     pub fn new() -> Self {
         let bookmarks: Mutex<Vec<Bookmark>> = Mutex::new(vec![]);
         Self { bookmarks }
     }
 }
 
-impl Repository for InMemoryRepository {
+impl Repository for MemoryRepository {
     fn insert(&self, bookmark: Bookmark) -> Result<Bookmark, ()> {
         let mut lock = match self.bookmarks.lock() {
             Ok(lock) => lock,
