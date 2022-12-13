@@ -1,20 +1,22 @@
 use std::sync::Arc;
 
+type BookmarkId = String;
+
 #[derive(std::fmt::Debug, PartialEq, Clone)]
 pub struct Bookmark {
-    pub id: String,
+    pub id: BookmarkId,
     pub url: String,
     pub title: String,
 }
 
 #[derive(std::fmt::Debug, PartialEq, Clone)]
-pub struct BookmarkCreatedEvent {
-    pub id: String,
-    pub url: String,
-    pub title: String,
+pub enum DomainEvent {
+    BookmarkCreated {
+        id: BookmarkId,
+        url: String,
+        title: String,
+    },
 }
-
-type BookmarkId = String;
 
 #[derive(std::fmt::Debug)]
 pub struct BookmarkInput {
@@ -33,14 +35,27 @@ pub trait Repository: Sync {
 }
 
 pub trait EventLog: Sync {
-    fn push(&self, event: BookmarkCreatedEvent) -> Result<(), ()>;
+    fn push(&self, event: DomainEvent) -> Result<(), ()>;
+    fn get_all_events(&self) -> Vec<DomainEvent>;
 }
 
-pub fn read_bookmark(
-    bookmark_query: BookmarkQuery,
-    repo: Arc<dyn Repository>,
-) -> Result<Bookmark, ()> {
-    repo.fetch_first(bookmark_query)
+pub fn get_bookmark(query: BookmarkQuery, log: Arc<dyn EventLog>) -> Option<Bookmark> {
+    // TODO replace with read model
+    log.get_all_events()
+        .iter()
+        .fold(None, |acc, event| match event {
+            DomainEvent::BookmarkCreated { id, url, title } => {
+                if id == &query.id {
+                    Some(Bookmark {
+                        id: id.clone(),
+                        title: title.clone(),
+                        url: url.clone(),
+                    })
+                } else {
+                    acc
+                }
+            }
+        })
 }
 
 pub fn delete_bookmark(_bookmark_query: BookmarkQuery) -> () {}
@@ -56,7 +71,7 @@ pub fn create_bookmark(
         title: bookmark_input.title.clone(),
     });
 
-    let _log_res = log.push(BookmarkCreatedEvent {
+    let _log_res = log.push(DomainEvent::BookmarkCreated {
         id: bookmark_input.url.clone(), // XXX temporary
         url: bookmark_input.url.clone(),
         title: bookmark_input.title.clone(),
@@ -85,7 +100,7 @@ mod tests {
         )
         .unwrap();
 
-        let bookmark = read_bookmark(BookmarkQuery { id: id.clone() }, repo.clone()).unwrap();
+        let bookmark = get_bookmark(BookmarkQuery { id: id.clone() }, log.clone()).unwrap();
 
         assert_eq!(
             bookmark,
