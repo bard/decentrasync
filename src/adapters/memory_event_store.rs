@@ -1,19 +1,19 @@
 use std::sync::Mutex;
 
-use crate::app::{DomainEvent, EventLog};
+use crate::app::{DomainEvent, EventStore};
 
-pub struct MemoryEventLog {
+pub struct MemoryEventStore {
     events: Mutex<Vec<DomainEvent>>,
 }
 
-impl MemoryEventLog {
+impl MemoryEventStore {
     pub fn new() -> Self {
         let events: Mutex<Vec<DomainEvent>> = Mutex::new(vec![]);
         Self { events }
     }
 }
 
-impl EventLog for MemoryEventLog {
+impl EventStore for MemoryEventStore {
     fn push(&self, event: DomainEvent) -> Result<(), ()> {
         let mut lock = match self.events.lock() {
             Ok(lock) => lock,

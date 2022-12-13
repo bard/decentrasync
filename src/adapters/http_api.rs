@@ -1,9 +1,9 @@
 use rouille::router;
 use std::sync::Arc;
 
-use crate::app::EventLog;
+use crate::app::EventStore;
 
-pub fn run(_log: Arc<dyn EventLog>) {
+pub fn run(_store: Arc<dyn EventStore>) {
     rouille::start_server("localhost:9111", move |req| -> rouille::Response {
         router!(req,
                 (GET) (/) => {

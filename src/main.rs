@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use bookmarks::adapters::{http_api, memory_event_log::MemoryEventLog};
+use bookmarks::adapters::{http_api, memory_event_store::MemoryEventStore};
 
 fn main() {
-    let log = Arc::new(MemoryEventLog::new());
-    http_api::run(log);
+    let store = Arc::new(MemoryEventStore::new());
+    http_api::run(store);
 }
