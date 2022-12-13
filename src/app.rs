@@ -29,11 +29,6 @@ pub struct BookmarkQuery {
     pub id: BookmarkId,
 }
 
-pub trait Repository: Sync {
-    fn insert(&self, bookmark: Bookmark) -> Result<Bookmark, ()>;
-    fn fetch_first(&self, query: BookmarkQuery) -> Result<Bookmark, ()>;
-}
-
 pub trait EventLog: Sync {
     fn push(&self, event: DomainEvent) -> Result<(), ()>;
     fn get_all_events(&self) -> Vec<DomainEvent>;
@@ -62,15 +57,8 @@ pub fn delete_bookmark(_bookmark_query: BookmarkQuery) -> () {}
 
 pub fn create_bookmark(
     bookmark_input: BookmarkInput,
-    repo: Arc<dyn Repository>,
     log: Arc<dyn EventLog>,
 ) -> Result<String, ()> {
-    let _repo_res = repo.insert(Bookmark {
-        id: bookmark_input.url.clone(), // XXX temporary
-        url: bookmark_input.url.clone(),
-        title: bookmark_input.title.clone(),
-    });
-
     let _log_res = log.push(DomainEvent::BookmarkCreated {
         id: bookmark_input.url.clone(), // XXX temporary
         url: bookmark_input.url.clone(),
@@ -82,20 +70,18 @@ pub fn create_bookmark(
 
 #[cfg(test)]
 mod tests {
-    use crate::adapters::{memory_event_log::MemoryEventLog, memory_repository::MemoryRepository};
+    use crate::adapters::memory_event_log::MemoryEventLog;
 
     use super::*;
 
     #[test]
-    fn test_created_bookmark_is_saved_in_repository() {
-        let repo = Arc::new(MemoryRepository::new());
+    fn test_created_bookmark_is_saved_in_log() {
         let log = Arc::new(MemoryEventLog::new());
         let id = create_bookmark(
             BookmarkInput {
                 url: "http://bar".to_string(),
                 title: "bar".to_string(),
             },
-            repo.clone(),
             log.clone(),
         )
         .unwrap();
