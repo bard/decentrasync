@@ -38,6 +38,13 @@ impl EventStore for MemoryEventStore {
                         acc
                     }
                 }
+                DomainEvent::BookmarkDeleted { id } => {
+                    if id == &query.id {
+                        None
+                    } else {
+                        acc
+                    }
+                }
             }),
             _ => panic!(),
         }
@@ -53,6 +60,17 @@ impl EventStore for MemoryEventStore {
                 });
 
                 Ok(input.url.clone())
+            }
+            _ => panic!(),
+        }
+    }
+
+    fn delete_bookmark(&self, query: &BookmarkQuery) -> () {
+        match self.events.lock() {
+            Ok(mut lock) => {
+                lock.push(DomainEvent::BookmarkDeleted {
+                    id: query.id.clone(),
+                });
             }
             _ => panic!(),
         }

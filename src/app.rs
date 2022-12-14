@@ -16,6 +16,9 @@ pub enum DomainEvent {
         url: String,
         title: String,
     },
+    BookmarkDeleted {
+        id: BookmarkId,
+    },
 }
 
 #[derive(std::fmt::Debug)]
@@ -33,13 +36,16 @@ pub trait EventStore: Sync {
     fn push(&self, event: DomainEvent) -> Result<(), ()>;
     fn get_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark>;
     fn create_bookmark(&self, input: &BookmarkInput) -> Result<String, ()>;
+    fn delete_bookmark(&self, query: &BookmarkQuery) -> ();
 }
 
 pub fn get_bookmark(query: BookmarkQuery, store: Arc<dyn EventStore>) -> Option<Bookmark> {
     store.get_bookmark(&query)
 }
 
-pub fn delete_bookmark(_bookmark_query: BookmarkQuery) -> () {}
+pub fn delete_bookmark(query: BookmarkQuery, store: Arc<dyn EventStore>) -> () {
+    store.delete_bookmark(&query)
+}
 
 pub fn create_bookmark(input: BookmarkInput, store: Arc<dyn EventStore>) -> Result<BookmarkId, ()> {
     store.create_bookmark(&input)
@@ -52,18 +58,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_created_bookmark_is_saved_in_log() {
-        let log = Arc::new(MemoryEventStore::new());
+    fn test_created_bookmark_can_be_retrieved() {
+        let store = Arc::new(MemoryEventStore::new());
         let id = create_bookmark(
             BookmarkInput {
                 url: "http://bar".to_string(),
                 title: "bar".to_string(),
             },
-            log.clone(),
+            store.clone(),
         )
         .unwrap();
 
-        let bookmark = get_bookmark(BookmarkQuery { id: id.clone() }, log.clone()).unwrap();
+        let bookmark = get_bookmark(BookmarkQuery { id: id.clone() }, store.clone()).unwrap();
 
         assert_eq!(
             bookmark,
@@ -73,5 +79,24 @@ mod tests {
                 title: "bar".to_string(),
             }
         )
+    }
+
+    #[test]
+    fn test_deleted_bookmark_cannot_be_retrieved() {
+        let store = Arc::new(MemoryEventStore::new());
+        let id = create_bookmark(
+            BookmarkInput {
+                url: "http://bar".to_string(),
+                title: "bar".to_string(),
+            },
+            store.clone(),
+        )
+        .unwrap();
+
+        delete_bookmark(BookmarkQuery { id: id.clone() }, store.clone());
+
+        let bookmark = get_bookmark(BookmarkQuery { id: id.clone() }, store.clone());
+
+        assert_eq!(bookmark, None)
     }
 }
