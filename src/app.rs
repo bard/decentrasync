@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-type BookmarkId = String;
+pub type BookmarkId = String;
 
 #[derive(std::fmt::Debug, PartialEq, Clone)]
 pub struct Bookmark {
@@ -31,41 +31,18 @@ pub struct BookmarkQuery {
 
 pub trait EventStore: Sync {
     fn push(&self, event: DomainEvent) -> Result<(), ()>;
-    fn get_all_events(&self) -> Vec<DomainEvent>;
+    fn get_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark>;
+    fn create_bookmark(&self, input: &BookmarkInput) -> Result<String, ()>;
 }
 
 pub fn get_bookmark(query: BookmarkQuery, store: Arc<dyn EventStore>) -> Option<Bookmark> {
-    // TODO replace with read model
-    store.get_all_events()
-        .iter()
-        .fold(None, |acc, event| match event {
-            DomainEvent::BookmarkCreated { id, url, title } => {
-                if id == &query.id {
-                    Some(Bookmark {
-                        id: id.clone(),
-                        title: title.clone(),
-                        url: url.clone(),
-                    })
-                } else {
-                    acc
-                }
-            }
-        })
+    store.get_bookmark(&query)
 }
 
 pub fn delete_bookmark(_bookmark_query: BookmarkQuery) -> () {}
 
-pub fn create_bookmark(
-    bookmark_input: BookmarkInput,
-    store: Arc<dyn EventStore>,
-) -> Result<String, ()> {
-    let _log_res = store.push(DomainEvent::BookmarkCreated {
-        id: bookmark_input.url.clone(), // XXX temporary
-        url: bookmark_input.url.clone(),
-        title: bookmark_input.title.clone(),
-    });
-
-    Ok(bookmark_input.url)
+pub fn create_bookmark(input: BookmarkInput, store: Arc<dyn EventStore>) -> Result<BookmarkId, ()> {
+    store.create_bookmark(&input)
 }
 
 #[cfg(test)]
