@@ -14,16 +14,6 @@ impl MemoryEventStore {
 }
 
 impl EventStore for MemoryEventStore {
-    fn push(&self, event: DomainEvent) -> Result<(), ()> {
-        let mut lock = match self.events.lock() {
-            Ok(lock) => lock,
-            _ => panic!(),
-        };
-
-        lock.push(event.clone());
-        Ok(())
-    }
-
     fn get_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark> {
         match self.events.lock() {
             Ok(lock) => lock.iter().fold(None, |acc, event| match event {

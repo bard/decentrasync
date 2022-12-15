@@ -33,7 +33,6 @@ pub struct BookmarkQuery {
 }
 
 pub trait EventStore: Sync {
-    fn push(&self, event: DomainEvent) -> Result<(), ()>;
     fn get_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark>;
     fn create_bookmark(&self, input: &BookmarkInput) -> Result<String, ()>;
     fn delete_bookmark(&self, query: &BookmarkQuery) -> ();
