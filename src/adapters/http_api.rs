@@ -22,8 +22,8 @@ struct ReadResponse {
     title: String,
 }
 
-pub fn run(store: Arc<dyn app::EventStore>) {
-    start_server("localhost:9111", move |req| -> Response {
+pub fn run(url: &str, store: Arc<dyn app::EventStore>) {
+    start_server(url, move |req| -> Response {
         router!(
             req,
             (POST) (/bookmarks) => {
