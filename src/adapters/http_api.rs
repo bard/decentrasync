@@ -1,5 +1,5 @@
-use rouille::router;
-use serde::Deserialize;
+use rouille::{input::json_input, router, start_server, Response};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::app;
@@ -10,30 +10,48 @@ struct CreateRequest {
     title: String,
 }
 
+#[derive(Serialize)]
+struct CreateResponse {
+    id: String,
+}
+
+#[derive(Serialize)]
+struct ReadResponse {
+    id: String,
+    url: String,
+    title: String,
+}
+
 pub fn run(store: Arc<dyn app::EventStore>) {
-    rouille::start_server("localhost:9111", move |req| -> rouille::Response {
-        router!(req,
-                (POST) (/bookmarks) => {
-                    match rouille::input::json_input::<CreateRequest>(req) {
-                        Ok(data) => {
-                            let bookmark_id = app::create_bookmark(app::BookmarkInput {
-                                url: data.url.clone(),
-                                title: data.title.clone()
-                            }, store.clone()).unwrap();
-                            rouille::Response::text(bookmark_id)
-                        },
-                        _ => rouille::Response::text("error")
-                    }
-                },
-                (GET) (/bookmarks/{id: String}) => {
-                    match app::get_bookmark(app::BookmarkQuery {id: id.clone()}, store.clone()) {
-                        Some(bookmark) => rouille::Response::text(format!("{:?}", bookmark)),
-                        _ => rouille::Response::text("not found")
-                    }
-                },
-                _ => {
-                    rouille::Response::text("not found")
+    start_server("localhost:9111", move |req| -> Response {
+        router!(
+            req,
+            (POST) (/bookmarks) => {
+                match json_input::<CreateRequest>(req) {
+                    Ok(data) => {
+                        let id = app::create_bookmark(app::BookmarkInput {
+                            url: data.url,
+                            title: data.title
+                        }, store.clone()).unwrap();
+                        Response::json(&CreateResponse { id: id.to_owned()})
+                    },
+                    _ => Response::empty_400()
                 }
+            },
+            (GET) (/bookmarks/{id: String}) => {
+                match app::get_bookmark(app::BookmarkQuery { id },
+                                        store.clone()) {
+                    Some(bookmark) => Response::json(&ReadResponse{
+                        id: bookmark.id,
+                        url: bookmark.url,
+                        title: bookmark.title
+                    }),
+                    _ => Response::empty_404()
+                }
+            },
+            _ => {
+                Response::empty_404()
+            }
         )
     })
 }
