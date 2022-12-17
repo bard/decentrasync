@@ -66,14 +66,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bookmarks"
-version = "0.1.0"
-dependencies = [
- "rouille",
- "serde",
-]
-
-[[package]]
 name = "brotli"
 version = "3.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -226,6 +218,14 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "decentralized_bookmarks"
+version = "0.1.0"
+dependencies = [
+ "rouille",
+ "serde",
 ]
 
 [[package]]
