@@ -35,13 +35,13 @@ pub struct BookmarkQuery {
 }
 
 pub trait EventStore: Send + Sync {
-    fn get_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark>;
+    fn read_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark>;
     fn save_bookmark(&self, bookmark: &Bookmark) -> Result<String, ()>;
     fn delete_bookmark(&self, query: &BookmarkQuery) -> ();
 }
 
 pub fn get_bookmark(query: BookmarkQuery, store: Arc<dyn EventStore>) -> Option<Bookmark> {
-    store.get_bookmark(&query)
+    store.read_bookmark(&query)
 }
 
 pub fn delete_bookmark(query: BookmarkQuery, store: Arc<dyn EventStore>) -> () {

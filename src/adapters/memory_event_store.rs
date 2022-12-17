@@ -13,7 +13,7 @@ impl MemoryEventStore {
 }
 
 impl EventStore for MemoryEventStore {
-    fn get_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark> {
+    fn read_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark> {
         match self.events.lock() {
             Ok(lock) => lock.iter().fold(None, |acc, event| match event {
                 DomainEvent::BookmarkCreated { id, url, title } => {
