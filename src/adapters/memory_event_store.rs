@@ -1,6 +1,5 @@
+use crate::app::{Bookmark, BookmarkId, BookmarkQuery, DomainEvent, EventStore};
 use std::sync::Mutex;
-
-use crate::app::{Bookmark, BookmarkId, BookmarkInput, BookmarkQuery, DomainEvent, EventStore};
 
 pub struct MemoryEventStore {
     events: Mutex<Vec<DomainEvent>>,
@@ -40,16 +39,15 @@ impl EventStore for MemoryEventStore {
         }
     }
 
-    fn create_bookmark(&self, input: &BookmarkInput) -> Result<BookmarkId, ()> {
+    fn save_bookmark(&self, bookmark: &Bookmark) -> Result<BookmarkId, ()> {
         match self.events.lock() {
             Ok(mut lock) => {
                 lock.push(DomainEvent::BookmarkCreated {
-                    id: input.url.clone(), // XXX temporary
-                    url: input.url.clone(),
-                    title: input.title.clone(),
+                    id: bookmark.id.clone(),
+                    url: bookmark.url.clone(),
+                    title: bookmark.title.clone(),
                 });
-
-                Ok(input.url.clone())
+                Ok(bookmark.id.clone())
             }
             _ => panic!(),
         }
@@ -64,5 +62,24 @@ impl EventStore for MemoryEventStore {
             }
             _ => panic!(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_creation_causes_event_to_be_added_to_log() {
+        let store = MemoryEventStore::new();
+        store
+            .save_bookmark(&Bookmark {
+                id: String::from("123"),
+                url: String::from("https://example.com"),
+                title: String::from("Example"),
+            })
+            .unwrap();
+
+        assert_eq!(store.events.lock().unwrap().len(), 1);
     }
 }

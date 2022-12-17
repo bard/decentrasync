@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use uuid::Uuid;
+
 pub type BookmarkId = String;
 
 #[derive(std::fmt::Debug, PartialEq, Clone)]
@@ -34,7 +36,7 @@ pub struct BookmarkQuery {
 
 pub trait EventStore: Send + Sync {
     fn get_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark>;
-    fn create_bookmark(&self, input: &BookmarkInput) -> Result<String, ()>;
+    fn save_bookmark(&self, bookmark: &Bookmark) -> Result<String, ()>;
     fn delete_bookmark(&self, query: &BookmarkQuery) -> ();
 }
 
@@ -47,11 +49,19 @@ pub fn delete_bookmark(query: BookmarkQuery, store: Arc<dyn EventStore>) -> () {
 }
 
 pub fn create_bookmark(input: BookmarkInput, store: Arc<dyn EventStore>) -> Result<BookmarkId, ()> {
-    store.create_bookmark(&input)
+    let bookmark = Bookmark {
+        id: Uuid::new_v4().to_string(),
+        url: input.url.clone(),
+        title: input.title.clone(),
+    };
+
+    store.save_bookmark(&bookmark)
 }
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
+
     use crate::adapters::memory_event_store::MemoryEventStore;
 
     use super::*;
@@ -67,6 +77,8 @@ mod tests {
             store.clone(),
         )
         .unwrap();
+
+        assert!(Uuid::parse_str(id.as_str()).is_ok());
 
         let bookmark = get_bookmark(BookmarkQuery { id: id.clone() }, store.clone()).unwrap();
 
