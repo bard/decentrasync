@@ -11,18 +11,6 @@ pub struct Bookmark {
     pub title: String,
 }
 
-#[derive(std::fmt::Debug, PartialEq, Clone)]
-pub enum DomainEvent {
-    BookmarkCreated {
-        id: BookmarkId,
-        url: String,
-        title: String,
-    },
-    BookmarkDeleted {
-        id: BookmarkId,
-    },
-}
-
 #[derive(std::fmt::Debug)]
 pub struct BookmarkInput {
     pub url: String,
