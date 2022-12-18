@@ -1,5 +1,5 @@
 [package]
-name = "decentralized_bookmarks"
+name = "dumb_channel_decentralized_sync"
 version = "0.1.0"
 edition = "2021"
 
