@@ -1,13 +1,13 @@
-use crate::app::{Bookmark, BookmarkQuery, DomainEvent, DomainEventEnvelope, EventStore};
+use crate::app::{Bookmark, BookmarkQuery, DomainEvent, DomainEventPayload, EventStore};
 use std::sync::Mutex;
 
 pub struct MemoryEventStore {
-    events: Mutex<Vec<DomainEventEnvelope>>,
+    events: Mutex<Vec<DomainEvent>>,
 }
 
 impl MemoryEventStore {
     pub fn new() -> Self {
-        let events: Mutex<Vec<DomainEventEnvelope>> = Mutex::new(vec![]);
+        let events: Mutex<Vec<DomainEvent>> = Mutex::new(vec![]);
         Self { events }
     }
 
@@ -24,7 +24,7 @@ impl MemoryEventStore {
 }
 
 impl EventStore for MemoryEventStore {
-    fn push_event(&self, event: DomainEventEnvelope) -> () {
+    fn push_event(&self, event: DomainEvent) -> () {
         match self.events.lock() {
             Ok(mut lock) => lock.push(event.clone()),
             _ => panic!(),
@@ -34,7 +34,7 @@ impl EventStore for MemoryEventStore {
     fn read_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark> {
         match self.events.lock() {
             Ok(lock) => lock.iter().fold(None, |acc, event| match &event.payload {
-                DomainEvent::BookmarkCreated { id, url, title } => {
+                DomainEventPayload::BookmarkCreated { id, url, title } => {
                     if id == &query.id {
                         Some(Bookmark {
                             id: id.clone(),
@@ -45,14 +45,14 @@ impl EventStore for MemoryEventStore {
                         acc
                     }
                 }
-                DomainEvent::BookmarkDeleted { id } => {
+                DomainEventPayload::BookmarkDeleted { id } => {
                     if id == &query.id {
                         None
                     } else {
                         acc
                     }
                 }
-                DomainEvent::BookmarkTitleUpdated { id, title } => {
+                DomainEventPayload::BookmarkTitleUpdated { id, title } => {
                     if id == &query.id {
                         match acc {
                             Some(Bookmark {
@@ -78,15 +78,19 @@ impl EventStore for MemoryEventStore {
 
 #[cfg(test)]
 mod tests {
+    use crate::app::DomainEventMeta;
+
     use super::*;
     use mock_instant::Instant;
 
     #[test]
     fn test_read_model_exposes_bookmark_by_id() {
         let store = MemoryEventStore::new();
-        store.push_event(DomainEventEnvelope {
-            time: Instant::now(),
-            payload: DomainEvent::BookmarkCreated {
+        store.push_event(DomainEvent {
+            meta: DomainEventMeta {
+                created_at: Instant::now(),
+            },
+            payload: DomainEventPayload::BookmarkCreated {
                 id: String::from("123"),
                 url: String::from("https://example.com"),
                 title: String::from("Example"),

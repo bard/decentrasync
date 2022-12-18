@@ -9,13 +9,18 @@ use mock_instant::Instant;
 use std::time::Instant;
 
 #[derive(std::fmt::Debug, PartialEq, Clone)]
-pub struct DomainEventEnvelope {
-    pub time: Instant,
-    pub payload: DomainEvent,
+pub struct DomainEvent {
+    pub meta: DomainEventMeta,
+    pub payload: DomainEventPayload,
 }
 
 #[derive(std::fmt::Debug, PartialEq, Clone)]
-pub enum DomainEvent {
+pub struct DomainEventMeta {
+    pub created_at: Instant,
+}
+
+#[derive(std::fmt::Debug, PartialEq, Clone)]
+pub enum DomainEventPayload {
     BookmarkCreated {
         id: BookmarkId,
         url: String,
@@ -49,7 +54,7 @@ pub struct BookmarkQuery {
 }
 
 pub trait EventStore: Send + Sync {
-    fn push_event(&self, event: DomainEventEnvelope) -> ();
+    fn push_event(&self, event: DomainEvent) -> ();
     fn read_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark>;
 }
 
@@ -65,9 +70,11 @@ pub mod command {
     use super::*;
 
     pub fn delete_bookmark(query: BookmarkQuery, store: Arc<dyn EventStore>) -> Result<(), ()> {
-        store.push_event(DomainEventEnvelope {
-            time: Instant::now(),
-            payload: DomainEvent::BookmarkDeleted {
+        store.push_event(DomainEvent {
+            meta: DomainEventMeta {
+                created_at: Instant::now(),
+            },
+            payload: DomainEventPayload::BookmarkDeleted {
                 id: query.id.clone(),
             },
         });
@@ -75,9 +82,11 @@ pub mod command {
     }
 
     pub fn create_bookmark(bookmark: Bookmark, store: Arc<dyn EventStore>) -> Result<(), ()> {
-        store.push_event(DomainEventEnvelope {
-            time: Instant::now(),
-            payload: DomainEvent::BookmarkCreated {
+        store.push_event(DomainEvent {
+            meta: DomainEventMeta {
+                created_at: Instant::now(),
+            },
+            payload: DomainEventPayload::BookmarkCreated {
                 id: bookmark.id.clone(),
                 url: bookmark.url.clone(),
                 title: bookmark.title.clone(),
@@ -93,9 +102,11 @@ pub mod command {
     ) -> Result<(), ()> {
         let bookmark = store.read_bookmark(&BookmarkQuery { id }).unwrap();
         if bookmark.title != title {
-            store.push_event(DomainEventEnvelope {
-                time: Instant::now(),
-                payload: DomainEvent::BookmarkTitleUpdated {
+            store.push_event(DomainEvent {
+                meta: DomainEventMeta {
+                    created_at: Instant::now(),
+                },
+                payload: DomainEventPayload::BookmarkTitleUpdated {
                     id: bookmark.id.clone(),
                     title: title.clone(),
                 },
