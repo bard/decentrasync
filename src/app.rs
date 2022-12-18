@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use uuid::Uuid;
-
 pub type BookmarkId = String;
 
 #[derive(std::fmt::Debug, PartialEq, Clone)]
@@ -55,33 +53,23 @@ pub mod command {
         store.delete_bookmark(&query)
     }
 
-    pub fn create_bookmark(
-        input: BookmarkInput,
-        store: Arc<dyn EventStore>,
-    ) -> Result<BookmarkId, ()> {
-        let bookmark = Bookmark {
-            id: Uuid::new_v4().to_string(),
-            url: input.url.clone(),
-            title: input.title.clone(),
-        };
-
-        store.save_bookmark(&bookmark)
+    pub fn create_bookmark(bookmark: Bookmark, store: Arc<dyn EventStore>) -> Result<(), ()> {
+        store.save_bookmark(&bookmark).unwrap();
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use uuid::Uuid;
-
-    use crate::adapters::memory_event_store::MemoryEventStore;
-
     use super::*;
+    use crate::adapters::memory_event_store::MemoryEventStore;
 
     #[test]
     fn test_created_bookmark_can_be_retrieved() {
         let store = Arc::new(MemoryEventStore::new());
-        let id = command::create_bookmark(
-            BookmarkInput {
+        command::create_bookmark(
+            Bookmark {
+                id: "123".to_string(),
                 url: "http://bar".to_string(),
                 title: "bar".to_string(),
             },
@@ -89,15 +77,18 @@ mod tests {
         )
         .unwrap();
 
-        assert!(Uuid::parse_str(id.as_str()).is_ok());
-
-        let bookmark =
-            query::read_bookmark(BookmarkQuery { id: id.clone() }, store.clone()).unwrap();
+        let bookmark = query::read_bookmark(
+            BookmarkQuery {
+                id: "123".to_string(),
+            },
+            store.clone(),
+        )
+        .unwrap();
 
         assert_eq!(
             bookmark,
             Bookmark {
-                id,
+                id: "123".to_string(),
                 url: "http://bar".to_string(),
                 title: "bar".to_string(),
             }
@@ -107,8 +98,9 @@ mod tests {
     #[test]
     fn test_deleted_bookmark_cannot_be_retrieved() {
         let store = Arc::new(MemoryEventStore::new());
-        let id = command::create_bookmark(
-            BookmarkInput {
+        command::create_bookmark(
+            Bookmark {
+                id: "123".to_string(),
                 url: "http://bar".to_string(),
                 title: "bar".to_string(),
             },
@@ -116,9 +108,19 @@ mod tests {
         )
         .unwrap();
 
-        command::delete_bookmark(BookmarkQuery { id: id.clone() }, store.clone());
+        command::delete_bookmark(
+            BookmarkQuery {
+                id: "123".to_string(),
+            },
+            store.clone(),
+        );
 
-        let bookmark = query::read_bookmark(BookmarkQuery { id: id.clone() }, store.clone());
+        let bookmark = query::read_bookmark(
+            BookmarkQuery {
+                id: "123".to_string(),
+            },
+            store.clone(),
+        );
 
         assert_eq!(bookmark, None)
     }

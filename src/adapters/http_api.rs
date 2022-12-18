@@ -1,6 +1,7 @@
 use rouille::{input::json_input, router, start_server, Response};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use uuid::Uuid;
 
 use crate::app;
 
@@ -29,11 +30,15 @@ pub fn run(url: &str, store: Arc<dyn app::EventStore>) {
             (POST) (/bookmarks) => {
                 match json_input::<CreateRequest>(req) {
                     Ok(data) => {
-                        let id = app::command::create_bookmark(app::BookmarkInput {
+                        let id = Uuid::new_v4().to_string();
+
+                        app::command::create_bookmark(app::Bookmark {
+                            id: id.clone(),
                             url: data.url,
                             title: data.title
                         }, store.clone()).unwrap();
-                        Response::json(&CreateResponse { id: id.to_owned()})
+
+                        Response::json(&CreateResponse { id })
                     },
                     _ => Response::empty_400()
                 }
