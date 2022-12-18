@@ -11,6 +11,11 @@ struct CreateRequest {
     title: String,
 }
 
+#[derive(Deserialize)]
+struct UpdateTitleRequest {
+    title: String,
+}
+
 #[derive(Serialize)]
 struct CreateResponse {
     id: String,
@@ -27,6 +32,16 @@ pub fn run(url: &str, store: Arc<dyn app::EventStore>) {
     start_server(url, move |req| -> Response {
         router!(
             req,
+            (GET) (/bookmarks/{id: String}) => {
+                match app::query::read_bookmark(app::BookmarkQuery { id },store.clone()) {
+                    Some(bookmark) => Response::json(&ReadResponse{
+                        id: bookmark.id,
+                        url: bookmark.url,
+                        title: bookmark.title
+                    }),
+                    _ => Response::empty_404()
+                }
+            },
             (POST) (/bookmarks) => {
                 match json_input::<CreateRequest>(req) {
                     Ok(data) => {
@@ -43,15 +58,13 @@ pub fn run(url: &str, store: Arc<dyn app::EventStore>) {
                     _ => Response::empty_400()
                 }
             },
-            (GET) (/bookmarks/{id: String}) => {
-                match app::query::read_bookmark(app::BookmarkQuery { id },
-                                        store.clone()) {
-                    Some(bookmark) => Response::json(&ReadResponse{
-                        id: bookmark.id,
-                        url: bookmark.url,
-                        title: bookmark.title
-                    }),
-                    _ => Response::empty_404()
+            (PUT) (/bookmarks/{id:  String}/title) => {
+                match json_input::<UpdateTitleRequest>(req) {
+                    Ok(data) => {
+                        app::command::update_bookmark_title(id, data.title, store.clone()).unwrap();
+                        Response::empty_204()
+                    },
+                    _ => Response::empty_400()
                 }
             },
             _ => {

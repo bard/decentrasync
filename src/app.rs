@@ -2,6 +2,18 @@ use std::sync::Arc;
 
 pub type BookmarkId = String;
 
+#[cfg(test)]
+use mock_instant::Instant;
+
+#[cfg(not(test))]
+use std::time::Instant;
+
+#[derive(std::fmt::Debug, PartialEq, Clone)]
+pub struct DomainEventEnvelope {
+    pub time: Instant,
+    pub payload: DomainEvent,
+}
+
 #[derive(std::fmt::Debug, PartialEq, Clone)]
 pub enum DomainEvent {
     BookmarkCreated {
@@ -11,6 +23,10 @@ pub enum DomainEvent {
     },
     BookmarkDeleted {
         id: BookmarkId,
+    },
+    BookmarkTitleUpdated {
+        id: BookmarkId,
+        title: String,
     },
 }
 
@@ -33,9 +49,8 @@ pub struct BookmarkQuery {
 }
 
 pub trait EventStore: Send + Sync {
+    fn push_event(&self, event: DomainEventEnvelope) -> ();
     fn read_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark>;
-    fn save_bookmark(&self, bookmark: &Bookmark) -> Result<String, ()>;
-    fn delete_bookmark(&self, query: &BookmarkQuery) -> ();
 }
 
 pub mod query {
@@ -49,12 +64,43 @@ pub mod query {
 pub mod command {
     use super::*;
 
-    pub fn delete_bookmark(query: BookmarkQuery, store: Arc<dyn EventStore>) -> () {
-        store.delete_bookmark(&query)
+    pub fn delete_bookmark(query: BookmarkQuery, store: Arc<dyn EventStore>) -> Result<(), ()> {
+        store.push_event(DomainEventEnvelope {
+            time: Instant::now(),
+            payload: DomainEvent::BookmarkDeleted {
+                id: query.id.clone(),
+            },
+        });
+        Ok(())
     }
 
     pub fn create_bookmark(bookmark: Bookmark, store: Arc<dyn EventStore>) -> Result<(), ()> {
-        store.save_bookmark(&bookmark).unwrap();
+        store.push_event(DomainEventEnvelope {
+            time: Instant::now(),
+            payload: DomainEvent::BookmarkCreated {
+                id: bookmark.id.clone(),
+                url: bookmark.url.clone(),
+                title: bookmark.title.clone(),
+            },
+        });
+        Ok(())
+    }
+
+    pub fn update_bookmark_title(
+        id: BookmarkId,
+        title: String,
+        store: Arc<dyn EventStore>,
+    ) -> Result<(), ()> {
+        let bookmark = store.read_bookmark(&BookmarkQuery { id }).unwrap();
+        if bookmark.title != title {
+            store.push_event(DomainEventEnvelope {
+                time: Instant::now(),
+                payload: DomainEvent::BookmarkTitleUpdated {
+                    id: bookmark.id.clone(),
+                    title: title.clone(),
+                },
+            });
+        }
         Ok(())
     }
 }
@@ -67,6 +113,7 @@ mod tests {
     #[test]
     fn test_created_bookmark_can_be_retrieved() {
         let store = Arc::new(MemoryEventStore::new());
+
         command::create_bookmark(
             Bookmark {
                 id: "123".to_string(),
@@ -96,6 +143,34 @@ mod tests {
     }
 
     #[test]
+    fn test_bookmark_title_can_be_updated() {
+        let store = Arc::new(MemoryEventStore::new());
+
+        command::create_bookmark(
+            Bookmark {
+                id: "123".to_string(),
+                url: "http://bar".to_string(),
+                title: "bar".to_string(),
+            },
+            store.clone(),
+        )
+        .unwrap();
+
+        command::update_bookmark_title("123".to_string(), "foo".to_string(), store.clone())
+            .unwrap();
+
+        let bookmark = query::read_bookmark(
+            BookmarkQuery {
+                id: "123".to_string(),
+            },
+            store.clone(),
+        )
+        .unwrap();
+
+        assert_eq!(bookmark.title, "foo");
+    }
+
+    #[test]
     fn test_deleted_bookmark_cannot_be_retrieved() {
         let store = Arc::new(MemoryEventStore::new());
         command::create_bookmark(
@@ -113,7 +188,8 @@ mod tests {
                 id: "123".to_string(),
             },
             store.clone(),
-        );
+        )
+        .unwrap();
 
         let bookmark = query::read_bookmark(
             BookmarkQuery {
