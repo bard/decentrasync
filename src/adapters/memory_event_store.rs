@@ -34,6 +34,17 @@ impl MemoryEventStore {
         let events: Mutex<Vec<DomainEventEnvelope>> = Mutex::new(vec![]);
         Self { events }
     }
+
+    pub fn external_event_received(&self, event: DomainEventEnvelope) -> Result<(), ()> {
+        match self.events.lock() {
+            Ok(mut lock) => {
+                lock.push(event.clone());
+                lock.sort_by(|a, b| b.time.cmp(&a.time));
+                Ok(())
+            }
+            _ => panic!(),
+        }
+    }
 }
 
 impl EventStore for MemoryEventStore {
@@ -129,4 +140,7 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn test_external_events_are_received_and_inserted_according_to_their_timestamp() {}
 }
