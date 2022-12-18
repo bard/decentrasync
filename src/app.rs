@@ -55,6 +55,7 @@ pub struct BookmarkQuery {
 
 pub trait EventStore: Send + Sync {
     fn push_event(&self, event: DomainEvent) -> ();
+    fn import_event(&self, event: DomainEvent) -> ();
     fn read_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark>;
 }
 
