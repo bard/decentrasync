@@ -5,6 +5,18 @@ use uuid::Uuid;
 pub type BookmarkId = String;
 
 #[derive(std::fmt::Debug, PartialEq, Clone)]
+pub enum DomainEvent {
+    BookmarkCreated {
+        id: BookmarkId,
+        url: String,
+        title: String,
+    },
+    BookmarkDeleted {
+        id: BookmarkId,
+    },
+}
+
+#[derive(std::fmt::Debug, PartialEq, Clone)]
 pub struct Bookmark {
     pub id: BookmarkId,
     pub url: String,
@@ -28,22 +40,33 @@ pub trait EventStore: Send + Sync {
     fn delete_bookmark(&self, query: &BookmarkQuery) -> ();
 }
 
-pub fn get_bookmark(query: BookmarkQuery, store: Arc<dyn EventStore>) -> Option<Bookmark> {
-    store.read_bookmark(&query)
+pub mod query {
+    use super::*;
+
+    pub fn read_bookmark(query: BookmarkQuery, store: Arc<dyn EventStore>) -> Option<Bookmark> {
+        store.read_bookmark(&query)
+    }
 }
 
-pub fn delete_bookmark(query: BookmarkQuery, store: Arc<dyn EventStore>) -> () {
-    store.delete_bookmark(&query)
-}
+pub mod command {
+    use super::*;
 
-pub fn create_bookmark(input: BookmarkInput, store: Arc<dyn EventStore>) -> Result<BookmarkId, ()> {
-    let bookmark = Bookmark {
-        id: Uuid::new_v4().to_string(),
-        url: input.url.clone(),
-        title: input.title.clone(),
-    };
+    pub fn delete_bookmark(query: BookmarkQuery, store: Arc<dyn EventStore>) -> () {
+        store.delete_bookmark(&query)
+    }
 
-    store.save_bookmark(&bookmark)
+    pub fn create_bookmark(
+        input: BookmarkInput,
+        store: Arc<dyn EventStore>,
+    ) -> Result<BookmarkId, ()> {
+        let bookmark = Bookmark {
+            id: Uuid::new_v4().to_string(),
+            url: input.url.clone(),
+            title: input.title.clone(),
+        };
+
+        store.save_bookmark(&bookmark)
+    }
 }
 
 #[cfg(test)]
@@ -57,7 +80,7 @@ mod tests {
     #[test]
     fn test_created_bookmark_can_be_retrieved() {
         let store = Arc::new(MemoryEventStore::new());
-        let id = create_bookmark(
+        let id = command::create_bookmark(
             BookmarkInput {
                 url: "http://bar".to_string(),
                 title: "bar".to_string(),
@@ -68,7 +91,8 @@ mod tests {
 
         assert!(Uuid::parse_str(id.as_str()).is_ok());
 
-        let bookmark = get_bookmark(BookmarkQuery { id: id.clone() }, store.clone()).unwrap();
+        let bookmark =
+            query::read_bookmark(BookmarkQuery { id: id.clone() }, store.clone()).unwrap();
 
         assert_eq!(
             bookmark,
@@ -83,7 +107,7 @@ mod tests {
     #[test]
     fn test_deleted_bookmark_cannot_be_retrieved() {
         let store = Arc::new(MemoryEventStore::new());
-        let id = create_bookmark(
+        let id = command::create_bookmark(
             BookmarkInput {
                 url: "http://bar".to_string(),
                 title: "bar".to_string(),
@@ -92,9 +116,9 @@ mod tests {
         )
         .unwrap();
 
-        delete_bookmark(BookmarkQuery { id: id.clone() }, store.clone());
+        command::delete_bookmark(BookmarkQuery { id: id.clone() }, store.clone());
 
-        let bookmark = get_bookmark(BookmarkQuery { id: id.clone() }, store.clone());
+        let bookmark = query::read_bookmark(BookmarkQuery { id: id.clone() }, store.clone());
 
         assert_eq!(bookmark, None)
     }

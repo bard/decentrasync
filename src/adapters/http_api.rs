@@ -29,7 +29,7 @@ pub fn run(url: &str, store: Arc<dyn app::EventStore>) {
             (POST) (/bookmarks) => {
                 match json_input::<CreateRequest>(req) {
                     Ok(data) => {
-                        let id = app::create_bookmark(app::BookmarkInput {
+                        let id = app::command::create_bookmark(app::BookmarkInput {
                             url: data.url,
                             title: data.title
                         }, store.clone()).unwrap();
@@ -39,7 +39,7 @@ pub fn run(url: &str, store: Arc<dyn app::EventStore>) {
                 }
             },
             (GET) (/bookmarks/{id: String}) => {
-                match app::get_bookmark(app::BookmarkQuery { id },
+                match app::query::read_bookmark(app::BookmarkQuery { id },
                                         store.clone()) {
                     Some(bookmark) => Response::json(&ReadResponse{
                         id: bookmark.id,

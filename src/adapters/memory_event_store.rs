@@ -1,4 +1,4 @@
-use crate::app::{Bookmark, BookmarkId, BookmarkQuery, EventStore};
+use crate::app::{Bookmark, BookmarkId, BookmarkQuery, DomainEvent, EventStore};
 use std::sync::Mutex;
 
 #[cfg(test)]
@@ -11,18 +11,6 @@ use std::time::Instant;
 pub struct DomainEventEnvelope {
     time: Instant,
     payload: DomainEvent,
-}
-
-#[derive(std::fmt::Debug, PartialEq, Clone)]
-pub enum DomainEvent {
-    BookmarkCreated {
-        id: BookmarkId,
-        url: String,
-        title: String,
-    },
-    BookmarkDeleted {
-        id: BookmarkId,
-    },
 }
 
 pub struct MemoryEventStore {
