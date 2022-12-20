@@ -221,6 +221,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "decentrasync"
+version = "0.1.0"
+dependencies = [
+ "mock_instant",
+ "rouille",
+ "serde",
+ "uuid",
+]
+
+[[package]]
 name = "deflate"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -238,16 +248,6 @@ checksum = "8168378f4e5023e7218c89c891c0fd8ecdb5e5e4f18cb78f38cf245dd021e76f"
 dependencies = [
  "block-buffer",
  "crypto-common",
-]
-
-[[package]]
-name = "dumb_channel_decentralized_sync"
-version = "0.1.0"
-dependencies = [
- "mock_instant",
- "rouille",
- "serde",
- "uuid",
 ]
 
 [[package]]
