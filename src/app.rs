@@ -8,18 +8,18 @@ use mock_instant::Instant;
 #[cfg(not(test))]
 use std::time::Instant;
 
-#[derive(std::fmt::Debug, PartialEq, Clone)]
+#[derive(std::fmt::Debug, PartialEq, Eq, Clone)]
 pub struct DomainEvent {
     pub meta: DomainEventMeta,
     pub payload: DomainEventPayload,
 }
 
-#[derive(std::fmt::Debug, PartialEq, Clone)]
+#[derive(std::fmt::Debug, PartialEq, Eq, Clone)]
 pub struct DomainEventMeta {
     pub created_at: Instant,
 }
 
-#[derive(std::fmt::Debug, PartialEq, Clone)]
+#[derive(std::fmt::Debug, PartialEq, Eq, Clone)]
 pub enum DomainEventPayload {
     BookmarkCreated {
         id: BookmarkId,
@@ -35,7 +35,7 @@ pub enum DomainEventPayload {
     },
 }
 
-#[derive(std::fmt::Debug, PartialEq, Clone)]
+#[derive(std::fmt::Debug, PartialEq, Eq, Clone)]
 pub struct Bookmark {
     pub id: BookmarkId,
     pub url: String,
@@ -54,8 +54,8 @@ pub struct BookmarkQuery {
 }
 
 pub trait EventStore: Send + Sync {
-    fn push_event(&self, event: DomainEvent) -> ();
-    fn import_event(&self, event: DomainEvent) -> ();
+    fn push_event(&self, event: DomainEvent);
+    fn import_event(&self, event: DomainEvent);
     fn read_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark>;
 }
 
@@ -75,9 +75,7 @@ pub mod command {
             meta: DomainEventMeta {
                 created_at: Instant::now(),
             },
-            payload: DomainEventPayload::BookmarkDeleted {
-                id: query.id.clone(),
-            },
+            payload: DomainEventPayload::BookmarkDeleted { id: query.id },
         });
         Ok(())
     }
@@ -90,7 +88,7 @@ pub mod command {
             payload: DomainEventPayload::BookmarkCreated {
                 id: bookmark.id.clone(),
                 url: bookmark.url.clone(),
-                title: bookmark.title.clone(),
+                title: bookmark.title,
             },
         });
         Ok(())
@@ -108,8 +106,8 @@ pub mod command {
                     created_at: Instant::now(),
                 },
                 payload: DomainEventPayload::BookmarkTitleUpdated {
-                    id: bookmark.id.clone(),
-                    title: title.clone(),
+                    id: bookmark.id,
+                    title,
                 },
             });
         }

@@ -13,19 +13,19 @@ impl MemoryEventStore {
 }
 
 impl EventStore for MemoryEventStore {
-    fn import_event(&self, event: DomainEvent) -> () {
+    fn import_event(&self, event: DomainEvent) {
         match self.events.lock() {
             Ok(mut lock) => {
-                lock.push(event.clone());
+                lock.push(event);
                 lock.sort_by(|a, b| a.meta.created_at.cmp(&b.meta.created_at));
             }
             _ => panic!(),
         }
     }
 
-    fn push_event(&self, event: DomainEvent) -> () {
+    fn push_event(&self, event: DomainEvent) {
         match self.events.lock() {
-            Ok(mut lock) => lock.push(event.clone()),
+            Ok(mut lock) => lock.push(event),
             _ => panic!(),
         }
     }
@@ -58,10 +58,10 @@ impl EventStore for MemoryEventStore {
                                 id,
                                 url,
                                 title: _title,
-                            }) => Some(Bookmark {
-                                id: id.clone(),
+                             }) => Some(Bookmark {
+                                id,
                                 title: title.clone(),
-                                url: url.clone(),
+                                url,
                             }),
                             _ => None,
                         }
@@ -108,7 +108,7 @@ mod tests {
     }
 
     #[test]
-    fn test_importing_an_event_sorts_the_log() {
+     fn test_importing_an_event_sorts_the_log() {
         let store = MemoryEventStore::new();
 
         let earlier_external_event_time = Instant::now();
