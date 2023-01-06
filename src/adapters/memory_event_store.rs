@@ -36,41 +36,11 @@ impl EventStore for MemoryEventStore {
     fn read_bookmarks(&self) -> Option<Vec<Bookmark>> {
         match self.events.lock() {
             Ok(lock) => {
-                let mut map: HashMap<BookmarkId, Bookmark> = HashMap::new();
-                lock.iter().for_each(|event| match &event.payload {
-                    DomainEventPayload::BookmarkCreated { id, url, title } => {
-                        if map.contains_key(id) {
-                            panic!()
-                        } else {
-                            map.insert(
-                                id.to_string(),
-                                Bookmark {
-                                    id: id.to_string(),
-                                    url: url.to_string(),
-                                    title: title.to_string(),
-                                },
-                            );
-                        }
-                    }
-                    DomainEventPayload::BookmarkDeleted { id } => {
-                        map.remove(id);
-                    }
-                    DomainEventPayload::BookmarkTitleUpdated { id, title } => match map.get(id) {
-                        Some(bookmark) => {
-                            map.insert(
-                                id.clone(),
-                                Bookmark {
-                                    id: bookmark.id.clone(),
-                                    url: bookmark.url.clone(),
-                                    title: title.clone(),
-                                },
-                            );
-                        }
-                        None => {}
-                    },
-                });
+                let mut read_model: HashMap<BookmarkId, Bookmark> = HashMap::new();
+                lock.iter()
+                    .for_each(|event| self::update_read_model(&mut read_model, &event.payload));
 
-                let mut items: Vec<Bookmark> = map.values().cloned().collect();
+                let mut items: Vec<Bookmark> = read_model.values().cloned().collect();
                 items.sort_unstable_by_key(|b| b.id.clone());
                 return Some(items);
             }
@@ -80,44 +50,16 @@ impl EventStore for MemoryEventStore {
 
     fn read_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark> {
         match self.events.lock() {
-            Ok(lock) => lock.iter().fold(None, |acc, event| match &event.payload {
-                DomainEventPayload::BookmarkCreated { id, url, title } => {
-                    if id == &query.id {
-                        Some(Bookmark {
-                            id: id.clone(),
-                            title: title.clone(),
-                            url: url.clone(),
-                        })
-                    } else {
-                        acc
-                    }
+            Ok(lock) => {
+                let mut read_model: HashMap<BookmarkId, Bookmark> = HashMap::new();
+                lock.iter()
+                    .for_each(|event| self::update_read_model(&mut read_model, &event.payload));
+
+                match read_model.get(&query.id) {
+                    Some(bookmark) => Some(bookmark.clone()),
+                    None => None,
                 }
-                DomainEventPayload::BookmarkDeleted { id } => {
-                    if id == &query.id {
-                        None
-                    } else {
-                        acc
-                    }
-                }
-                DomainEventPayload::BookmarkTitleUpdated { id, title } => {
-                    if id == &query.id {
-                        match acc {
-                            Some(Bookmark {
-                                id,
-                                url,
-                                title: _title,
-                            }) => Some(Bookmark {
-                                id,
-                                title: title.clone(),
-                                url,
-                            }),
-                            _ => None,
-                        }
-                    } else {
-                        None
-                    }
-                }
-            }),
+            }
             _ => panic!(),
         }
     }
@@ -189,5 +131,40 @@ mod tests {
         let events = store.events.lock().unwrap();
 
         assert_eq!(events[0].meta.created_at, earlier_external_event_time);
+    }
+}
+
+fn update_read_model(state: &mut HashMap<BookmarkId, Bookmark>, event: &DomainEventPayload) {
+    match event {
+        DomainEventPayload::BookmarkCreated { id, url, title } => {
+            if state.contains_key(id) {
+                panic!()
+            } else {
+                state.insert(
+                    id.to_string(),
+                    Bookmark {
+                        id: id.to_string(),
+                        url: url.to_string(),
+                        title: title.to_string(),
+                    },
+                );
+            }
+        }
+        DomainEventPayload::BookmarkDeleted { id } => {
+            state.remove(id);
+        }
+        DomainEventPayload::BookmarkTitleUpdated { id, title } => match state.get(id) {
+            Some(bookmark) => {
+                state.insert(
+                    id.clone(),
+                    Bookmark {
+                        id: bookmark.id.clone(),
+                        url: bookmark.url.clone(),
+                        title: title.clone(),
+                    },
+                );
+            }
+            None => {}
+        },
     }
 }
