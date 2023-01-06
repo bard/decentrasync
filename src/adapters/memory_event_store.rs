@@ -1,4 +1,7 @@
-use crate::app::{Bookmark, BookmarkQuery, DomainEvent, DomainEventPayload, EventStore};
+use crate::app::{
+    Bookmark, BookmarkId, BookmarkQuery, DomainEvent, DomainEventPayload, EventStore,
+};
+use std::collections::HashMap;
 use std::sync::Mutex;
 
 pub struct MemoryEventStore {
@@ -26,6 +29,51 @@ impl EventStore for MemoryEventStore {
     fn push_event(&self, event: DomainEvent) {
         match self.events.lock() {
             Ok(mut lock) => lock.push(event),
+            _ => panic!(),
+        }
+    }
+
+    fn read_bookmarks(&self) -> Option<Vec<Bookmark>> {
+        match self.events.lock() {
+            Ok(lock) => {
+                let mut map: HashMap<BookmarkId, Bookmark> = HashMap::new();
+                lock.iter().for_each(|event| match &event.payload {
+                    DomainEventPayload::BookmarkCreated { id, url, title } => {
+                        if map.contains_key(id) {
+                            panic!()
+                        } else {
+                            map.insert(
+                                id.to_string(),
+                                Bookmark {
+                                    id: id.to_string(),
+                                    url: url.to_string(),
+                                    title: title.to_string(),
+                                },
+                            );
+                        }
+                    }
+                    DomainEventPayload::BookmarkDeleted { id } => {
+                        map.remove(id);
+                    }
+                    DomainEventPayload::BookmarkTitleUpdated { id, title } => match map.get(id) {
+                        Some(bookmark) => {
+                            map.insert(
+                                id.clone(),
+                                Bookmark {
+                                    id: bookmark.id.clone(),
+                                    url: bookmark.url.clone(),
+                                    title: title.clone(),
+                                },
+                            );
+                        }
+                        None => {}
+                    },
+                });
+
+                let mut items: Vec<Bookmark> = map.values().cloned().collect();
+                items.sort_unstable_by_key(|b| b.id.clone());
+                return Some(items);
+            }
             _ => panic!(),
         }
     }
@@ -58,7 +106,7 @@ impl EventStore for MemoryEventStore {
                                 id,
                                 url,
                                 title: _title,
-                             }) => Some(Bookmark {
+                            }) => Some(Bookmark {
                                 id,
                                 title: title.clone(),
                                 url,
@@ -108,7 +156,7 @@ mod tests {
     }
 
     #[test]
-     fn test_importing_an_event_sorts_the_log() {
+    fn test_importing_an_event_sorts_the_log() {
         let store = MemoryEventStore::new();
 
         let earlier_external_event_time = Instant::now();

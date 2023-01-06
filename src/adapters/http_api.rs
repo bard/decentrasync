@@ -28,6 +28,18 @@ struct ReadResponse {
     title: String,
 }
 
+#[derive(Serialize)]
+struct ReadBookmarksResponseBookmarkEntry {
+    id: String,
+    url: String,
+    title: String,
+}
+
+#[derive(Serialize)]
+struct ReadBookmarksResponse {
+    bookmarks: Vec<ReadBookmarksResponseBookmarkEntry>,
+}
+
 pub fn run(url: &str, store: Arc<dyn app::EventStore>) {
     start_server(url, move |req| -> Response {
         router!(
@@ -40,6 +52,18 @@ pub fn run(url: &str, store: Arc<dyn app::EventStore>) {
                         title: bookmark.title
                     }),
                     _ => Response::empty_404()
+                }
+            },
+            (GET) (/bookmarks)=> {
+                match app::query::read_bookmarks(store.clone()) {
+                    Some(bookmarks) => Response::json(&ReadBookmarksResponse{
+                        bookmarks: bookmarks.iter().map(|b| ReadBookmarksResponseBookmarkEntry {
+                            id: b.id.clone(),
+                            url: b.url.clone(),
+                            title: b.title.clone()
+                        }).collect()
+                    }),
+                    _ => Response::empty_400()
                 }
             },
             (POST) (/bookmarks) => {

@@ -57,6 +57,7 @@ pub trait EventStore: Send + Sync {
     fn push_event(&self, event: DomainEvent);
     fn import_event(&self, event: DomainEvent);
     fn read_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark>;
+    fn read_bookmarks(&self) -> Option<Vec<Bookmark>>;
 }
 
 pub mod query {
@@ -64,6 +65,10 @@ pub mod query {
 
     pub fn read_bookmark(query: BookmarkQuery, store: Arc<dyn EventStore>) -> Option<Bookmark> {
         store.read_bookmark(&query)
+    }
+
+    pub fn read_bookmarks(store: Arc<dyn EventStore>) -> Option<Vec<Bookmark>> {
+        store.read_bookmarks()
     }
 }
 
@@ -150,6 +155,41 @@ mod tests {
                 title: "bar".to_string(),
             }
         )
+    }
+
+    #[test]
+    fn test_bookmark_list_can_be_retrieved() {
+        let store = Arc::new(MemoryEventStore::new());
+
+        command::create_bookmark(
+            Bookmark {
+                id: "123".to_string(),
+                url: "http://bar".to_string(),
+                title: "bar".to_string(),
+            },
+            store.clone(),
+        )
+        .unwrap();
+
+        command::create_bookmark(
+            Bookmark {
+                id: "456".to_string(),
+                url: "http://foo".to_string(),
+                title: "foo".to_string(),
+            },
+            store.clone(),
+        )
+        .unwrap();
+
+        command::update_bookmark_title("456".to_string(), "foobar".to_string(), store.clone())
+            .unwrap();
+
+        let bookmarks = query::read_bookmarks(store.clone()).unwrap();
+
+        assert_eq!(bookmarks.len(), 2);
+        assert_eq!(bookmarks[0].id, "123");
+        assert_eq!(bookmarks[1].id, "456");
+        assert_eq!(bookmarks[1].title, "foobar");
     }
 
     #[test]
