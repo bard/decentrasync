@@ -40,12 +40,12 @@ struct ReadBookmarksResponse {
     bookmarks: Vec<ReadBookmarksResponseBookmarkEntry>,
 }
 
-pub fn run(url: &str, store: Arc<dyn app::EventStore>) {
+pub fn run(url: &str, event_store: Arc<dyn app::EventStore>, read_model: Arc<dyn app::ReadModel>) {
     start_server(url, move |req| -> Response {
         router!(
             req,
             (GET) (/bookmarks/{id: String}) => {
-                match app::query::read_bookmark(app::BookmarkQuery { id },store.clone()) {
+                match app::query::read_bookmark(app::BookmarkQuery { id }, read_model.clone()) {
                     Some(bookmark) => Response::json(&ReadResponse{
                         id: bookmark.id,
                         url: bookmark.url,
@@ -55,7 +55,7 @@ pub fn run(url: &str, store: Arc<dyn app::EventStore>) {
                 }
             },
             (GET) (/bookmarks)=> {
-                match app::query::read_bookmarks(store.clone()) {
+                match app::query::read_bookmarks(read_model.clone()) {
                     Some(bookmarks) => Response::json(&ReadBookmarksResponse{
                         bookmarks: bookmarks.iter().map(|b| ReadBookmarksResponseBookmarkEntry {
                             id: b.id.clone(),
@@ -75,7 +75,7 @@ pub fn run(url: &str, store: Arc<dyn app::EventStore>) {
                             id: id.clone(),
                             url: data.url,
                             title: data.title
-                        }, store.clone()).unwrap();
+                        }, event_store.clone(), read_model.clone()).unwrap();
 
                         Response::json(&CreateResponse { id })
                     },
@@ -85,7 +85,7 @@ pub fn run(url: &str, store: Arc<dyn app::EventStore>) {
             (PUT) (/bookmarks/{id:  String}/title) => {
                 match json_input::<UpdateTitleRequest>(req) {
                     Ok(data) => {
-                        app::command::update_bookmark_title(id, data.title, store.clone()).unwrap();
+                        app::command::update_bookmark_title(id, data.title, event_store.clone(), read_model.clone()).unwrap();
                         Response::empty_204()
                     },
                     _ => Response::empty_400()
