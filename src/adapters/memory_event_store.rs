@@ -14,20 +14,14 @@ impl MemoryEventStore {
 
 impl EventStore for MemoryEventStore {
     fn import_event(&self, event: DomainEvent) {
-        match self.events.lock() {
-            Ok(mut lock) => {
-                lock.push(event);
-                lock.sort_by(|a, b| a.meta.created_at.cmp(&b.meta.created_at));
-            }
-            _ => panic!(),
-        }
+        let mut lock = self.events.lock().unwrap();
+        lock.push(event);
+        lock.sort_by(|a, b| a.meta.created_at.cmp(&b.meta.created_at));
     }
 
     fn store_event(&self, event: DomainEvent) {
-        match self.events.lock() {
-            Ok(mut lock) => lock.push(event),
-            _ => panic!(),
-        }
+        let mut lock = self.events.lock().unwrap();
+        lock.push(event);
     }
 }
 
