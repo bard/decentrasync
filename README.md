@@ -1,16 +1,16 @@
-This project explores an idea: decentralized synchronization of state among instances of the same application (e.g mobile and desktop versions of a notetaking app) by relying on "dumb" channels only (e.g. filesystem folders shared over the network) and supporting disconnected operation.
+This project explores an idea: instances of an application (e.g. mobile, web, and desktop versions of a notetaking app) belonging to the same user can synchronize their state using [dumb](https://www.hyperorg.com/misc/stupidnet.html) channels (e.g. shared folders) instead of centralized servers, without requiring to be permanently connected.
 
-The sample implementation is in Rust and loosely follows the CQRS, Event Sourcing, and Ports/Adapters approaches.
+The sample implementation is a simple bookmark manager written in Rust, loosely following CQRS, Event Sourcing, and Ports/Adapters approaches.
 
 ## Status
 
-Half a prototype. "Physical" event logs not added yet.
+Basic logic in place. Still lacks a physical log implementation.
 
 ## Mode of operation
 
-1. State is stored as event logs, one per application instance.
-2. An event log is serialized to a folder, one event per file.
-3. Each instance exposes its log to other instances by sharing the log folder, using a service like Dropbox or a tool like Syncthing.
-4. Each instance computes its own "interpretation" of history by replaying events from all logs.
-   - Alternatively, each instance "imports" events from other logs, adding suitable metadata to differentiate sources.
-5. As in Event Sourcing, events are immutable, but contrary to it, new events can appear in the history. Application state is an interpretation of history and thus can change when previously unknown "facts" become known (e.g. an instance reconnects and share events generated while offline).
+1. In response to user actions, an application instance adds a business event to a log (e.g. `BookmarkCreatedEvent`).
+   - The log is the _local_ source of truth and the application state is a derivation of it.
+2. The event log is serialized to a disk folder, one file per event.
+3. Each instance makes its log available to other instances whenever possible by sharing the folder with a synchronization tool (e.g. [Syncthing](https://syncthing.net/)) or even a simple USB stick.
+4. Each instance computes its own interpretation of the collective history by replaying events from all logs.
+5. Like in Event Sourcing, events are immutable, but contrary to it, new events can appear at any point in the timeline, rather than just its tail (e.g. an instance reconnects and shares events that were stored to the log while offline). This is similar to the real world, where previously unknown facts become known and lead to different "conclusions" (a different application state).
