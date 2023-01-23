@@ -1,6 +1,6 @@
 use rouille::{input::json_input, router, start_server, Response};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::{fs::File, sync::Arc};
 use uuid::Uuid;
 
 use crate::app;
@@ -44,7 +44,7 @@ pub fn run(url: &str, event_store: Arc<dyn app::EventStore>, read_model: Arc<dyn
     start_server(url, move |req| -> Response {
         router!(
             req,
-            (GET) (/bookmarks/{id: String}) => {
+            (GET) (/api/bookmarks/{id: String}) => {
                 match app::query::read_bookmark(app::BookmarkQuery { id }, read_model.clone()) {
                     Some(bookmark) => Response::json(&ReadResponse{
                         id: bookmark.id,
@@ -54,7 +54,7 @@ pub fn run(url: &str, event_store: Arc<dyn app::EventStore>, read_model: Arc<dyn
                     _ => Response::empty_404()
                 }
             },
-            (GET) (/bookmarks)=> {
+            (GET) (/api/bookmarks)=> {
                 match app::query::read_bookmarks(read_model.clone()) {
                     Some(bookmarks) => Response::json(&ReadBookmarksResponse{
                         bookmarks: bookmarks.iter().map(|b| ReadBookmarksResponseBookmarkEntry {
@@ -66,7 +66,7 @@ pub fn run(url: &str, event_store: Arc<dyn app::EventStore>, read_model: Arc<dyn
                     _ => Response::empty_400()
                 }
             },
-            (POST) (/bookmarks) => {
+            (POST) (/api/bookmarks) => {
                 match json_input::<CreateRequest>(req) {
                     Ok(data) => {
                         let id = Uuid::new_v4().to_string();
@@ -82,7 +82,7 @@ pub fn run(url: &str, event_store: Arc<dyn app::EventStore>, read_model: Arc<dyn
                     _ => Response::empty_400()
                 }
             },
-            (PUT) (/bookmarks/{id:  String}/title) => {
+            (PUT) (/api/bookmarks/{id:  String}/title) => {
                 match json_input::<UpdateTitleRequest>(req) {
                     Ok(data) => {
                         app::command::update_bookmark_title(id, data.title, event_store.clone(), read_model.clone()).unwrap();
@@ -90,6 +90,10 @@ pub fn run(url: &str, event_store: Arc<dyn app::EventStore>, read_model: Arc<dyn
                     },
                     _ => Response::empty_400()
                 }
+            },
+            (GET) (/) => {
+                let file = File::open("public/index.html").unwrap();
+                Response::from_file("text/html", file)
             },
             _ => {
                 Response::empty_404()

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title></title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@picocss/pico@latest/css/pico.min.css"
+    />
+    <script src="https://unpkg.com/mustache@latest"></script>
+    <script src="https://unpkg.com/htmx.org@1.8.5"></script>
+    <script src="https://unpkg.com/htmx.org@1.8.5/dist/ext/client-side-templates.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.8.5/dist/ext/json-enc.js"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/path-deps.js"></script>
+  </head>
+
+  <body>
+    <main class="container" hx-ext="client-side-templates, path-deps">
+      <div class="grid">
+        <section>
+          <h2>Bookmarks</h2>
+          <div
+            id="bookmarks"
+            mustache-template="bookmark-tmpl"
+            hx-get="/api/bookmarks"
+            hx-swap="innerHTML"
+            hx-trigger="path-deps, load"
+            path-deps="/api/bookmarks"
+          ></div>
+        </section>
+
+        <section>
+          <h3>Add bookmark</h3>
+          <form
+            id="bookmark-form"
+            hx-post="/api/bookmarks"
+            hx-ext="json-enc"
+            hx-swap="none"
+          >
+            <input id="url" name="url" type="url" placeholder="URL" />
+            <input id="title" name="title" type="text" placeholder="Title" />
+            <button type="submit">Submit</button>
+          </form>
+        </section>
+      </div>
+      <template id="bookmark-tmpl">
+        <ul>
+          {{#bookmarks}}
+          <li><a target="_blank" href="{{url}}">{{title}}</a></li>
+          {{/bookmarks}}
+        </ul>
+      </template>
+    </main>
+
+    <script>
+      document
+        .querySelector("#bookmark-form")
+        .addEventListener("htmx:afterRequest", function (e) {
+          e.target.reset();
+        });
+    </script>
+  </body>
+</html>
