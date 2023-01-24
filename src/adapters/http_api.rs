@@ -1,9 +1,14 @@
 use rouille::{input::json_input, router, start_server, Response};
+use rust_embed::RustEmbed;
 use serde::{Deserialize, Serialize};
-use std::{fs::File, sync::Arc};
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::app;
+
+#[derive(RustEmbed)]
+#[folder = "assets/"]
+struct Asset;
 
 #[derive(Deserialize)]
 struct CreateRequest {
@@ -92,8 +97,8 @@ pub fn run(url: &str, event_store: Arc<dyn app::EventStore>, read_model: Arc<dyn
                 }
             },
             (GET) (/) => {
-                let file = File::open("public/index.html").unwrap();
-                Response::from_file("text/html", file)
+                let asset = Asset::get("index.html").unwrap();
+                Response::from_data("text/html", asset.data.into_owned())
             },
             _ => {
                 Response::empty_404()
