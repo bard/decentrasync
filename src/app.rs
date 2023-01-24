@@ -1,25 +1,20 @@
-use std::sync::Arc;
+use serde::Serialize;
+use std::{sync::Arc, time::SystemTime};
 
 pub type BookmarkId = String;
 
-#[cfg(test)]
-use mock_instant::Instant;
-
-#[cfg(not(test))]
-use std::time::Instant;
-
-#[derive(std::fmt::Debug, PartialEq, Eq, Clone)]
+#[derive(std::fmt::Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct DomainEvent {
     pub meta: DomainEventMeta,
     pub payload: DomainEventPayload,
 }
 
-#[derive(std::fmt::Debug, PartialEq, Eq, Clone)]
+#[derive(std::fmt::Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct DomainEventMeta {
-    pub created_at: Instant,
+    pub created_at: SystemTime,
 }
 
-#[derive(std::fmt::Debug, PartialEq, Eq, Clone)]
+#[derive(std::fmt::Debug, PartialEq, Eq, Clone, Serialize)]
 pub enum DomainEventPayload {
     BookmarkCreated {
         id: BookmarkId,
@@ -64,6 +59,10 @@ pub trait ReadModel: Send + Sync {
     fn read_bookmarks(&self) -> Option<Vec<Bookmark>>;
 }
 
+pub trait Clock: Send + Sync {
+    fn now(&self) -> SystemTime;
+}
+
 pub mod query {
     use super::*;
 
@@ -77,16 +76,18 @@ pub mod query {
 }
 
 pub mod command {
+
     use super::*;
 
     pub fn delete_bookmark(
         query: BookmarkQuery,
         event_store: Arc<dyn EventStore>,
         read_model: Arc<dyn ReadModel>,
+        clock: Arc<dyn Clock>,
     ) -> Result<(), ()> {
         let event = DomainEvent {
             meta: DomainEventMeta {
-                created_at: Instant::now(),
+                created_at: clock.now(),
             },
             payload: DomainEventPayload::BookmarkDeleted { id: query.id },
         };
@@ -101,10 +102,11 @@ pub mod command {
         bookmark: Bookmark,
         event_store: Arc<dyn EventStore>,
         read_model: Arc<dyn ReadModel>,
+        clock: Arc<dyn Clock>,
     ) -> Result<(), ()> {
         let event = DomainEvent {
             meta: DomainEventMeta {
-                created_at: Instant::now(),
+                created_at: clock.now(),
             },
             payload: DomainEventPayload::BookmarkCreated {
                 id: bookmark.id.clone(),
@@ -124,12 +126,13 @@ pub mod command {
         title: String,
         event_store: Arc<dyn EventStore>,
         read_model: Arc<dyn ReadModel>,
+        clock: Arc<dyn Clock>,
     ) -> Result<(), ()> {
         let bookmark = read_model.read_bookmark(&BookmarkQuery { id }).unwrap();
         if bookmark.title != title {
             let event = DomainEvent {
                 meta: DomainEventMeta {
-                    created_at: Instant::now(),
+                    created_at: clock.now(),
                 },
                 payload: DomainEventPayload::BookmarkTitleUpdated {
                     id: bookmark.id,
@@ -148,13 +151,15 @@ pub mod command {
 mod tests {
     use super::*;
     use crate::adapters::{
-        memory_event_store::MemoryEventStore, memory_read_model::MemoryReadModel,
+        clock::FakeClock, memory_event_store::MemoryEventStore,
+        memory_read_model::MemoryReadModel,
     };
 
     #[test]
     fn test_created_bookmark_can_be_retrieved() {
         let event_store = Arc::new(MemoryEventStore::new());
         let read_model = Arc::new(MemoryReadModel::new());
+        let clock = Arc::new(FakeClock::new());
 
         command::create_bookmark(
             Bookmark {
@@ -164,6 +169,7 @@ mod tests {
             },
             event_store.clone(),
             read_model.clone(),
+            clock.clone(),
         )
         .unwrap();
 
@@ -189,6 +195,7 @@ mod tests {
     fn test_bookmark_list_can_be_retrieved() {
         let event_store = Arc::new(MemoryEventStore::new());
         let read_model = Arc::new(MemoryReadModel::new());
+        let clock = Arc::new(FakeClock::new());
 
         command::create_bookmark(
             Bookmark {
@@ -198,6 +205,7 @@ mod tests {
             },
             event_store.clone(),
             read_model.clone(),
+            clock.clone(),
         )
         .unwrap();
 
@@ -209,6 +217,7 @@ mod tests {
             },
             event_store.clone(),
             read_model.clone(),
+            clock.clone(),
         )
         .unwrap();
 
@@ -217,6 +226,7 @@ mod tests {
             "foobar".to_string(),
             event_store.clone(),
             read_model.clone(),
+            clock.clone(),
         )
         .unwrap();
 
@@ -232,6 +242,7 @@ mod tests {
     fn test_bookmark_title_can_be_updated() {
         let event_store = Arc::new(MemoryEventStore::new());
         let read_model = Arc::new(MemoryReadModel::new());
+        let clock = Arc::new(FakeClock::new());
 
         command::create_bookmark(
             Bookmark {
@@ -241,6 +252,7 @@ mod tests {
             },
             event_store.clone(),
             read_model.clone(),
+            clock.clone(),
         )
         .unwrap();
 
@@ -249,6 +261,7 @@ mod tests {
             "foo".to_string(),
             event_store.clone(),
             read_model.clone(),
+            clock.clone(),
         )
         .unwrap();
 
@@ -267,6 +280,7 @@ mod tests {
     fn test_deleted_bookmark_cannot_be_retrieved() {
         let event_store = Arc::new(MemoryEventStore::new());
         let read_model = Arc::new(MemoryReadModel::new());
+        let clock = Arc::new(FakeClock::new());
 
         command::create_bookmark(
             Bookmark {
@@ -276,6 +290,7 @@ mod tests {
             },
             event_store.clone(),
             read_model.clone(),
+            clock.clone(),
         )
         .unwrap();
 
@@ -285,6 +300,7 @@ mod tests {
             },
             event_store.clone(),
             read_model.clone(),
+            clock.clone(),
         )
         .unwrap();
 

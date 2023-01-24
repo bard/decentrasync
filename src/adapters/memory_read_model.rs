@@ -66,17 +66,20 @@ impl ReadModel for MemoryReadModel {
 
 #[cfg(test)]
 mod tests {
-    use crate::app::DomainEventMeta;
-
     use super::*;
-    use mock_instant::Instant;
+    use crate::{
+        adapters::clock::FakeClock,
+        app::{DomainEventMeta, Clock},
+    };
 
     #[test]
     fn test_read_model_exposes_bookmark_by_id() {
         let read_model = MemoryReadModel::new();
+        let clock = FakeClock::new();
+
         read_model.update(&DomainEvent {
             meta: DomainEventMeta {
-                created_at: Instant::now(),
+                created_at: clock.now(),
             },
             payload: DomainEventPayload::BookmarkCreated {
                 id: String::from("123"),

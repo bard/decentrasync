@@ -29,16 +29,18 @@ impl EventStore for MemoryEventStore {
 mod tests {
     use std::time::Duration;
 
-    use crate::app::{DomainEventMeta, DomainEventPayload};
-
     use super::*;
-    use mock_instant::{Instant, MockClock};
+    use crate::{
+        adapters::clock::FakeClock,
+        app::{Clock, DomainEventMeta, DomainEventPayload},
+    };
 
     #[test]
     fn test_importing_an_event_sorts_the_log() {
         let event_store = MemoryEventStore::new();
+        let clock = FakeClock::new();
 
-        let earlier_external_event_time = Instant::now();
+        let earlier_external_event_time = clock.now();
         let earlier_external_event = DomainEvent {
             meta: DomainEventMeta {
                 created_at: earlier_external_event_time,
@@ -50,19 +52,20 @@ mod tests {
             },
         };
 
-        MockClock::advance(Duration::from_secs(10));
-
-        event_store.store_event(DomainEvent {
+        clock.advance(Duration::from_secs(10));
+        let later_local_event_time = clock.now();
+        let later_local_event = DomainEvent {
             meta: DomainEventMeta {
-                created_at: Instant::now(),
+                created_at: later_local_event_time,
             },
             payload: DomainEventPayload::BookmarkCreated {
                 id: String::from("123"),
                 url: String::from("https://example.com"),
                 title: String::from("Example"),
             },
-        });
+        };
 
+        event_store.store_event(later_local_event);
         event_store.import_event(earlier_external_event);
 
         let events = event_store.events.lock().unwrap();

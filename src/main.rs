@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use clap::Parser;
 use decentrasync::adapters::{
-    http_api, memory_event_store::MemoryEventStore, memory_read_model::MemoryReadModel,
+    clock::SystemClock, http_api, memory_event_store::MemoryEventStore,
+    memory_read_model::MemoryReadModel,
 };
 
 #[derive(Parser, Debug)]
@@ -15,9 +16,14 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
+    let event_store = Arc::new(MemoryEventStore::new());
+    let read_model = Arc::new(MemoryReadModel::new());
+    let clock = Arc::new(SystemClock::new());
+
     http_api::run(
         format!("localhost:{}", args.port).as_str(),
-        Arc::new(MemoryEventStore::new()),
-        Arc::new(MemoryReadModel::new()),
+        event_store.clone(),
+        read_model.clone(),
+        clock.clone(),
     );
 }

@@ -45,7 +45,12 @@ struct ReadBookmarksResponse {
     bookmarks: Vec<ReadBookmarksResponseBookmarkEntry>,
 }
 
-pub fn run(url: &str, event_store: Arc<dyn app::EventStore>, read_model: Arc<dyn app::ReadModel>) {
+pub fn run(
+    url: &str,
+    event_store: Arc<dyn app::EventStore>,
+    read_model: Arc<dyn app::ReadModel>,
+    clock: Arc<dyn app::Clock>,
+) {
     start_server(url, move |req| -> Response {
         router!(
             req,
@@ -80,7 +85,7 @@ pub fn run(url: &str, event_store: Arc<dyn app::EventStore>, read_model: Arc<dyn
                             id: id.clone(),
                             url: data.url,
                             title: data.title
-                        }, event_store.clone(), read_model.clone()).unwrap();
+                        }, event_store.clone(), read_model.clone(), clock.clone()).unwrap();
 
                         Response::json(&CreateResponse { id })
                     },
@@ -90,7 +95,13 @@ pub fn run(url: &str, event_store: Arc<dyn app::EventStore>, read_model: Arc<dyn
             (PUT) (/api/bookmarks/{id:  String}/title) => {
                 match json_input::<UpdateTitleRequest>(req) {
                     Ok(data) => {
-                        app::command::update_bookmark_title(id, data.title, event_store.clone(), read_model.clone()).unwrap();
+                        app::command::update_bookmark_title(
+                            id,
+                            data.title,
+                            event_store.clone(),
+                            read_model.clone(),
+                            clock.clone()
+                        ).unwrap();
                         Response::empty_204()
                     },
                     _ => Response::empty_400()
