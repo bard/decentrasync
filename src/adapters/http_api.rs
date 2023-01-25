@@ -107,6 +107,15 @@ pub fn run(
                     _ => Response::empty_400()
                 }
             },
+            (DELETE) (/api/bookmarks/{id:  String}) => {
+                app::command::delete_bookmark(
+                    id,
+                    event_store.clone(),
+                    read_model.clone(),
+                    clock.clone()
+                ).unwrap();
+                Response::empty_204()
+            },
             (GET) (/) => {
                 let asset = Asset::get("index.html").unwrap();
                 Response::from_data("text/html", asset.data.into_owned())

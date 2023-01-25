@@ -8,11 +8,29 @@
       rel="stylesheet"
       href="https://unpkg.com/@picocss/pico@latest/css/pico.min.css"
     />
-    <script src="https://unpkg.com/mustache@latest"></script>
+    <script src="https://unpkg.com/nunjucks@3.1.7/browser/nunjucks.min.js"></script>
     <script src="https://unpkg.com/htmx.org@1.8.5"></script>
     <script src="https://unpkg.com/htmx.org@1.8.5/dist/ext/client-side-templates.js"></script>
     <script src="https://unpkg.com/htmx.org@1.8.5/dist/ext/json-enc.js"></script>
     <script src="https://unpkg.com/htmx.org/dist/ext/path-deps.js"></script>
+
+    <style>
+      @media (min-width: 992px) {
+        main .grid {
+          grid-template-columns: auto 25%;
+        }
+      }
+
+      #bookmarks ul {
+        padding-left: 0;
+      }
+      #bookmarks li {
+        list-style-type: none;
+      }
+      #bookmarks li > a[role="button"] {
+        margin-right: 1em;
+      }
+    </style>
   </head>
 
   <body>
@@ -22,7 +40,7 @@
           <h2>Bookmarks</h2>
           <div
             id="bookmarks"
-            mustache-template="bookmark-tmpl"
+            nunjucks-template="bookmark-tmpl"
             hx-get="/api/bookmarks"
             hx-swap="innerHTML"
             hx-trigger="path-deps, load"
@@ -30,8 +48,8 @@
           ></div>
         </section>
 
-        <section>
-          <h3>Add bookmark</h3>
+        <aside>
+          <h4>Add bookmark</h4>
           <form
             id="bookmark-form"
             hx-post="/api/bookmarks"
@@ -42,13 +60,25 @@
             <input id="title" name="title" type="text" placeholder="Title" />
             <button type="submit">Submit</button>
           </form>
-        </section>
+        </aside>
       </div>
+
       <template id="bookmark-tmpl">
         <ul>
-          {{#bookmarks}}
-          <li><a target="_blank" href="{{url}}">{{title}}</a></li>
-          {{/bookmarks}}
+          {% for b in bookmarks %}
+          <li>
+            <a
+              class="secondary"
+              href="#"
+              hx-delete="/api/bookmarks/{{b.id}}"
+              role="button"
+            >
+              ×
+            </a>
+
+            <a href="{{b.url}}">{{ b.title }}</a>
+          </li>
+          {% endfor %}
         </ul>
       </template>
     </main>

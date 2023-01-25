@@ -80,7 +80,7 @@ pub mod command {
     use super::*;
 
     pub fn delete_bookmark(
-        query: BookmarkQuery,
+        id: BookmarkId,
         event_store: Arc<dyn EventStore>,
         read_model: Arc<dyn ReadModel>,
         clock: Arc<dyn Clock>,
@@ -89,7 +89,7 @@ pub mod command {
             meta: DomainEventMeta {
                 created_at: clock.now(),
             },
-            payload: DomainEventPayload::BookmarkDeleted { id: query.id },
+            payload: DomainEventPayload::BookmarkDeleted { id },
         };
 
         read_model.update(&event);
@@ -151,8 +151,7 @@ pub mod command {
 mod tests {
     use super::*;
     use crate::adapters::{
-        clock::FakeClock, memory_event_store::MemoryEventStore,
-        memory_read_model::MemoryReadModel,
+        clock::FakeClock, memory_event_store::MemoryEventStore, memory_read_model::MemoryReadModel,
     };
 
     #[test]
@@ -295,9 +294,7 @@ mod tests {
         .unwrap();
 
         command::delete_bookmark(
-            BookmarkQuery {
-                id: "123".to_string(),
-            },
+            "123".to_string(),
             event_store.clone(),
             read_model.clone(),
             clock.clone(),
