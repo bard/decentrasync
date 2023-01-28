@@ -71,6 +71,7 @@
       </div>
 
       <template id="bookmark-list-tmpl">
+        {% if bookmarks | length %}
         <ul>
           {% for b in bookmarks %}
           <li>
@@ -99,6 +100,9 @@
           </li>
           {% endfor %}
         </ul>
+        {% else %}
+        <div>No bookmarks found.</div>
+        {% endif %}
       </template>
 
       <template id="bookmark-edit-tmpl">
