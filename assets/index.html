@@ -10,20 +10,27 @@
     />
     <link
       rel="stylesheet"
-      href="https://unpkg.com/@picocss/pico@latest/css/pico.min.css"
+      href="https://unpkg.com/@picocss/pico@1.5.7/css/pico.min.css"
     />
     <script src="https://unpkg.com/nunjucks@3.1.7/browser/nunjucks.min.js"></script>
     <script src="https://unpkg.com/htmx.org@1.8.5"></script>
     <script src="https://unpkg.com/htmx.org@1.8.5/dist/ext/client-side-templates.js"></script>
     <script src="https://unpkg.com/htmx.org@1.8.5/dist/ext/json-enc.js"></script>
-    <script src="https://unpkg.com/htmx.org/dist/ext/debug.js"></script>
-    <script src="https://unpkg.com/htmx.org/dist/ext/path-deps.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.8.5/dist/ext/debug.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.8.5/dist/ext/path-deps.js"></script>
 
     <style>
-      @media (min-width: 992px) {
-        main .grid {
-          grid-template-columns: auto 25%;
-        }
+      .container {
+        max-width: 24em;
+      }
+
+      h2 {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+      }
+      h2 > span {
+        flex: 1;
       }
 
       #bookmarks ul {
@@ -31,9 +38,16 @@
       }
       #bookmarks li {
         list-style-type: none;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+      }
+      #bookmarks li > a {
+        flex: 1;
       }
       #bookmarks li > a[role="button"] {
-        margin-right: 1em;
+        margin-left: 1em;
+        flex: 0;
       }
     </style>
   </head>
@@ -42,48 +56,37 @@
     <div id="dialog-container"></div>
 
     <main class="container">
-      <div class="grid">
-        <section>
-          <h2>Bookmarks</h2>
-          <div
-            id="bookmarks"
-            nunjucks-template="bookmark-list-tmpl"
-            hx-get="/api/bookmarks"
-            hx-swap="innerHTML"
-            hx-trigger="path-deps, load"
-            path-deps="/api/bookmarks"
-          ></div>
-        </section>
+      <section>
+        <h2>
+          <span> Bookmarks</span>
 
-        <aside>
-          <h4>Add bookmark</h4>
-          <form
-            id="bookmark-form"
-            hx-post="/api/bookmarks"
-            hx-ext="json-enc"
-            hx-swap="none"
+          <a
+            hx-target="#dialog-container"
+            nunjucks-template="bookmark-create-tmpl"
+            hx-get="/api/bookmarks"
+            class="outline contrast"
+            href="#"
+            role="button"
           >
-            <input id="url" name="url" type="url" placeholder="URL" />
-            <input id="title" name="title" type="text" placeholder="Title" />
-            <button type="submit">Submit</button>
-          </form>
-        </aside>
-      </div>
+            <i class="bx bx-bookmark-plus"></i>
+          </a>
+        </h2>
+        <div
+          id="bookmarks"
+          nunjucks-template="bookmark-list-tmpl"
+          hx-get="/api/bookmarks"
+          hx-swap="innerHTML"
+          hx-trigger="path-deps, load"
+          path-deps="/api/bookmarks"
+        ></div>
+      </section>
 
       <template id="bookmark-list-tmpl">
         {% if bookmarks | length %}
         <ul>
           {% for b in bookmarks %}
           <li>
-            <a
-              class="secondary outline"
-              href="#"
-              hx-delete="/api/bookmarks/{{b.id}}"
-              role="button"
-            >
-              <i class="bx bx-trash-alt"></i>
-            </a>
-
+            <a target="_blank" href="{{b.url}}">{{ b.title }}</a>
             <a
               hx-target="#dialog-container"
               nunjucks-template="bookmark-edit-tmpl"
@@ -91,18 +94,62 @@
               class="secondary"
               href="#"
               role="button"
-              class="bx bxs-edit"
             >
               <i class="bx bxs-edit"></i>
             </a>
 
-            <a target="_blank" href="{{b.url}}">{{ b.title }}</a>
+            <a
+              class="secondary"
+              href="#"
+              hx-delete="/api/bookmarks/{{b.id}}"
+              role="button"
+            >
+              <i class="bx bx-trash-alt"></i>
+            </a>
           </li>
           {% endfor %}
         </ul>
         {% else %}
-        <div>No bookmarks found.</div>
+        <div>
+          No bookmarks found.
+          <a
+            hx-target="#dialog-container"
+            nunjucks-template="bookmark-create-tmpl"
+            hx-get="/api/bookmarks"
+            href="#"
+            >Create one →
+          </a>
+        </div>
         {% endif %}
+      </template>
+
+      <template id="bookmark-create-tmpl">
+        <dialog id="create-dialog" open>
+          <form
+            hx-post="/api/bookmarks"
+            hx-ext="json-enc"
+            hx-target="#create-dialog"
+            hx-swap="delete"
+          >
+            <label for="url">
+              URL
+              <input type="url" name="url" />
+            </label>
+            <label for="title">
+              Title
+              <input type="text" name="title" />
+            </label>
+            <button type="submit">Create</button>
+            <button
+              hx-get="/api/bookmarks"
+              hx-target="#create-dialog"
+              hx-swap="delete"
+              class="secondary"
+            >
+              Cancel
+            </button>
+          </form>
+        </dialog>
       </template>
 
       <template id="bookmark-edit-tmpl">
@@ -117,25 +164,18 @@
               Title
               <input type="text" name="title" value="{{title}}" />
             </label>
-            <button type="submit">Save</button>
+            <button type="submit">Update</button>
           </form>
         </dialog>
       </template>
     </main>
 
     <script>
-      document
-        .querySelector("#bookmark-form")
-        .addEventListener("htmx:afterRequest", function (e) {
-          e.target.reset();
-        });
-
       htmx.on("htmx:beforeSwap", (e) => {
         // force swap even when response is 204
         // https://github.com/bigskysoftware/htmx/issues/199
         e.detail.shouldSwap = true;
       });
-
     </script>
   </body>
 </html>
