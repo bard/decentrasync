@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width" />
     <title></title>
     <link
+      href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css"
+      rel="stylesheet"
+    />
+    <link
       rel="stylesheet"
       href="https://unpkg.com/@picocss/pico@latest/css/pico.min.css"
     />
@@ -12,6 +16,7 @@
     <script src="https://unpkg.com/htmx.org@1.8.5"></script>
     <script src="https://unpkg.com/htmx.org@1.8.5/dist/ext/client-side-templates.js"></script>
     <script src="https://unpkg.com/htmx.org@1.8.5/dist/ext/json-enc.js"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/debug.js"></script>
     <script src="https://unpkg.com/htmx.org/dist/ext/path-deps.js"></script>
 
     <style>
@@ -33,14 +38,16 @@
     </style>
   </head>
 
-  <body>
-    <main class="container" hx-ext="client-side-templates, path-deps">
+  <body hx-ext="client-side-templates, path-deps">
+    <div id="dialog-container"></div>
+
+    <main class="container">
       <div class="grid">
         <section>
           <h2>Bookmarks</h2>
           <div
             id="bookmarks"
-            nunjucks-template="bookmark-tmpl"
+            nunjucks-template="bookmark-list-tmpl"
             hx-get="/api/bookmarks"
             hx-swap="innerHTML"
             hx-trigger="path-deps, load"
@@ -63,23 +70,52 @@
         </aside>
       </div>
 
-      <template id="bookmark-tmpl">
+      <template id="bookmark-list-tmpl">
         <ul>
           {% for b in bookmarks %}
           <li>
             <a
-              class="secondary"
+              class="secondary outline"
               href="#"
               hx-delete="/api/bookmarks/{{b.id}}"
               role="button"
             >
-              ×
+              <i class="bx bx-trash-alt"></i>
+            </a>
+
+            <a
+              hx-target="#dialog-container"
+              nunjucks-template="bookmark-edit-tmpl"
+              hx-get="/api/bookmarks/{{b.id}}"
+              class="secondary"
+              href="#"
+              role="button"
+              class="bx bxs-edit"
+            >
+              <i class="bx bxs-edit"></i>
             </a>
 
             <a href="{{b.url}}">{{ b.title }}</a>
           </li>
           {% endfor %}
         </ul>
+      </template>
+
+      <template id="bookmark-edit-tmpl">
+        <dialog id="edit-dialog" open>
+          <form
+            hx-ext="json-enc"
+            hx-put="/api/bookmarks/{{id}}/title"
+            hx-target="#edit-dialog"
+            hx-swap="delete"
+          >
+            <label for="title">
+              Title
+              <input type="text" name="title" value="{{title}}" />
+            </label>
+            <button type="submit">Save</button>
+          </form>
+        </dialog>
       </template>
     </main>
 
@@ -89,6 +125,13 @@
         .addEventListener("htmx:afterRequest", function (e) {
           e.target.reset();
         });
+
+      htmx.on("htmx:beforeSwap", (e) => {
+        // force swap even when response is 204
+        // https://github.com/bigskysoftware/htmx/issues/199
+        e.detail.shouldSwap = true;
+      });
+
     </script>
   </body>
 </html>

@@ -5,7 +5,7 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
     response::Response,
-    routing::{delete, get, post},
+    routing::{delete, get, post, put},
     Json, Router,
 };
 use hyper::header;
@@ -41,6 +41,7 @@ pub fn create_router(
         .route("/api/bookmarks", post(create_bookmark))
         .route("/api/bookmarks/:id", get(read_bookmark))
         .route("/api/bookmarks/:id", delete(delete_bookmark))
+        .route("/api/bookmarks/:id/title", put(update_bookmark_title))
         .with_state(deps)
 }
 
@@ -115,6 +116,28 @@ async fn create_bookmark(
         StatusCode::CREATED,
         Json(CreateBoomarkResponsePayload { id }),
     )
+}
+
+#[derive(Deserialize)]
+struct UpdateBookmarkTitleRequestPayload {
+    title: String,
+}
+
+async fn update_bookmark_title(
+    State(state): State<Arc<ServiceDependencies>>,
+    Path(id): Path<String>,
+    Json(payload): Json<UpdateBookmarkTitleRequestPayload>,
+) -> impl IntoResponse {
+    app::command::update_bookmark_title(
+        id,
+        payload.title,
+        state.event_store.clone(),
+        state.read_model.clone(),
+        state.clock.clone(),
+    )
+    .unwrap();
+
+    (StatusCode::NO_CONTENT, ())
 }
 
 async fn delete_bookmark(
