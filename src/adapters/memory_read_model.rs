@@ -1,4 +1,6 @@
-use crate::app::{Bookmark, BookmarkId, BookmarkQuery, DomainEvent, DomainEventPayload, ReadModel};
+use crate::app::{
+    Bookmark, BookmarkId, BookmarkQuery, DomainEvent, DomainEventPayload, ReadModel, ReadModelError,
+};
 use std::{collections::HashMap, sync::Mutex};
 
 pub struct MemoryReadModel {
@@ -13,13 +15,13 @@ impl MemoryReadModel {
 }
 
 impl ReadModel for MemoryReadModel {
-    fn update(&self, event: &DomainEvent) {
+    fn update(&self, event: &DomainEvent) -> Result<(), ReadModelError> {
         let mut bookmarks_by_id = self.bookmarks_by_id.lock().unwrap();
 
         match &event.payload {
             DomainEventPayload::BookmarkCreated { id, url, title } => {
                 if bookmarks_by_id.contains_key(id) {
-                    panic!()
+                    Err(ReadModelError::Generic)
                 } else {
                     bookmarks_by_id.insert(
                         id.to_string(),
@@ -29,10 +31,12 @@ impl ReadModel for MemoryReadModel {
                             title: title.to_string(),
                         },
                     );
+                    Ok(())
                 }
             }
             DomainEventPayload::BookmarkDeleted { id } => {
                 bookmarks_by_id.remove(id);
+                Ok(())
             }
             DomainEventPayload::BookmarkTitleUpdated { id, title } => {
                 bookmarks_by_id
@@ -44,6 +48,7 @@ impl ReadModel for MemoryReadModel {
                             title: title.clone(),
                         }
                     });
+                Ok(())
             }
         }
     }
@@ -69,7 +74,7 @@ mod tests {
     use super::*;
     use crate::{
         adapters::clock::FakeClock,
-        app::{DomainEventMeta, Clock},
+        app::{Clock, DomainEventMeta},
     };
 
     #[test]
@@ -77,16 +82,18 @@ mod tests {
         let read_model = MemoryReadModel::new();
         let clock = FakeClock::new();
 
-        read_model.update(&DomainEvent {
-            meta: DomainEventMeta {
-                created_at: clock.now(),
-            },
-            payload: DomainEventPayload::BookmarkCreated {
-                id: String::from("123"),
-                url: String::from("https://example.com"),
-                title: String::from("Example"),
-            },
-        });
+        read_model
+            .update(&DomainEvent {
+                meta: DomainEventMeta {
+                    created_at: clock.now(),
+                },
+                payload: DomainEventPayload::BookmarkCreated {
+                    id: String::from("123"),
+                    url: String::from("https://example.com"),
+                    title: String::from("Example"),
+                },
+            })
+            .unwrap();
 
         let bookmark = read_model
             .read_bookmark(&BookmarkQuery {

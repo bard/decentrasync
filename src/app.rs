@@ -49,18 +49,38 @@ pub struct BookmarkQuery {
 }
 
 pub trait EventStore: Send + Sync {
-    fn store_event(&self, event: DomainEvent);
+    fn store_event(&self, event: DomainEvent) -> Result<(), EventStoreError>;
     fn import_event(&self, event: DomainEvent);
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum EventStoreError {
+    #[error("Generic event store error")]
+    Generic,
+}
+
 pub trait ReadModel: Send + Sync {
-    fn update(&self, event: &DomainEvent);
+    fn update(&self, event: &DomainEvent) -> Result<(), ReadModelError>;
     fn read_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark>;
     fn read_bookmarks(&self) -> Option<Vec<Bookmark>>;
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum ReadModelError {
+    #[error("Generic read model error")]
+    Generic,
+}
+
 pub trait Clock: Send + Sync {
     fn now(&self) -> SystemTime;
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum AppError {
+    #[error("Read model error")]
+    ReadModelError(#[from] ReadModelError),
+    #[error("Event store error")]
+    EventStoreError(#[from] EventStoreError),
 }
 
 pub mod query {
@@ -84,7 +104,7 @@ pub mod command {
         event_store: Arc<dyn EventStore>,
         read_model: Arc<dyn ReadModel>,
         clock: Arc<dyn Clock>,
-    ) -> Result<(), ()> {
+    ) -> Result<(), AppError> {
         let event = DomainEvent {
             meta: DomainEventMeta {
                 created_at: clock.now(),
@@ -92,8 +112,12 @@ pub mod command {
             payload: DomainEventPayload::BookmarkDeleted { id },
         };
 
-        read_model.update(&event);
-        event_store.store_event(event);
+        read_model
+            .update(&event)
+            .map_err(AppError::ReadModelError)?;
+        event_store
+            .store_event(event)
+            .map_err(AppError::EventStoreError);
 
         Ok(())
     }
@@ -103,7 +127,7 @@ pub mod command {
         event_store: Arc<dyn EventStore>,
         read_model: Arc<dyn ReadModel>,
         clock: Arc<dyn Clock>,
-    ) -> Result<(), ()> {
+    ) -> Result<(), AppError> {
         let event = DomainEvent {
             meta: DomainEventMeta {
                 created_at: clock.now(),
@@ -115,8 +139,10 @@ pub mod command {
             },
         };
 
-        read_model.update(&event);
-        event_store.store_event(event);
+        read_model.update(&event).map_err(AppError::ReadModelError);
+        event_store
+            .store_event(event)
+            .map_err(AppError::EventStoreError);
 
         Ok(())
     }
@@ -127,7 +153,7 @@ pub mod command {
         event_store: Arc<dyn EventStore>,
         read_model: Arc<dyn ReadModel>,
         clock: Arc<dyn Clock>,
-    ) -> Result<(), ()> {
+    ) -> Result<(), AppError> {
         let bookmark = read_model.read_bookmark(&BookmarkQuery { id }).unwrap();
         if bookmark.title != title {
             let event = DomainEvent {
@@ -140,8 +166,12 @@ pub mod command {
                 },
             };
 
-            read_model.update(&event);
-            event_store.store_event(event);
+            read_model
+                .update(&event)
+                .map_err(AppError::ReadModelError)?;
+            event_store
+                .store_event(event)
+                .map_err(AppError::EventStoreError)?;
         }
         Ok(())
     }

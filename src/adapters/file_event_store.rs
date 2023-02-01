@@ -4,7 +4,7 @@ use std::{
     time::UNIX_EPOCH,
 };
 
-use crate::app::{DomainEvent, EventStore};
+use crate::app::{DomainEvent, EventStore, EventStoreError};
 
 pub struct FileSystemEventStore {
     log_folder_path: OsString,
@@ -20,21 +20,23 @@ impl FileSystemEventStore {
 
 impl EventStore for FileSystemEventStore {
     fn import_event(&self, _event: DomainEvent) {
-        panic!("Implement me");
+        todo!()
     }
 
-    fn store_event(&self, event: DomainEvent) {
+    fn store_event(&self, event: DomainEvent) -> Result<(), EventStoreError> {
         let timestamp_millis = event
             .meta
             .created_at
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .map_err(|_source| EventStoreError::Generic)?
             .as_millis();
 
         let stored_event_path =
             Path::new(self.log_folder_path.as_os_str()).join(format!("{}.json", timestamp_millis));
 
         std::fs::write(stored_event_path, serde_json::to_string(&event).unwrap()).unwrap();
+
+        Ok(())
     }
 }
 
@@ -45,7 +47,7 @@ mod tests {
     use std::time::Duration;
 
     use crate::adapters::clock::FakeClock;
-    use crate::app::{DomainEventMeta, DomainEventPayload, Clock};
+    use crate::app::{Clock, DomainEventMeta, DomainEventPayload};
 
     use super::*;
     use assert_fs::assert::PathAssert;
