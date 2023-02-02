@@ -47,6 +47,7 @@ pub mod command {
             payload: DomainEventPayload::BookmarkDeleted { id },
         };
 
+        // TODO guard against dual write
         read_model
             .update(&event)
             .map_err(AppError::ReadModelError)?;
@@ -74,6 +75,7 @@ pub mod command {
             },
         };
 
+        // TODO guard against dual write
         read_model
             .update(&event)
             .map_err(AppError::ReadModelError)?;
@@ -103,6 +105,7 @@ pub mod command {
                 },
             };
 
+            // TODO guard against dual write
             read_model
                 .update(&event)
                 .map_err(AppError::ReadModelError)?;
