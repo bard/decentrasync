@@ -1,4 +1,7 @@
-use crate::app::{DomainEvent, EventStore, EventStoreError};
+use crate::{
+    app::DomainEvent,
+    ports::{EventStore, EventStoreError},
+};
 use std::sync::Mutex;
 
 pub struct MemoryEventStore {
@@ -13,10 +16,11 @@ impl MemoryEventStore {
 }
 
 impl EventStore for MemoryEventStore {
-    fn import_event(&self, event: DomainEvent) {
+    fn import_event(&self, event: DomainEvent) -> Result<(), EventStoreError> {
         let mut lock = self.events.lock().unwrap();
         lock.push(event);
         lock.sort_by(|a, b| a.meta.created_at.cmp(&b.meta.created_at));
+        Ok(())
     }
 
     fn store_event(&self, event: DomainEvent) -> Result<(), EventStoreError> {
@@ -31,9 +35,10 @@ mod tests {
     use std::time::Duration;
 
     use super::*;
+    use crate::ports::Clock;
     use crate::{
         adapters::clock::FakeClock,
-        app::{Clock, DomainEventMeta, DomainEventPayload},
+        app::{DomainEventMeta, DomainEventPayload},
     };
 
     #[test]
@@ -66,8 +71,8 @@ mod tests {
             },
         };
 
-        event_store.store_event(later_local_event);
-        event_store.import_event(earlier_external_event);
+        event_store.store_event(later_local_event).unwrap();
+        event_store.import_event(earlier_external_event).unwrap();
 
         let events = event_store.events.lock().unwrap();
 

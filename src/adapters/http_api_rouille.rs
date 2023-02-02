@@ -1,10 +1,9 @@
+use crate::{app, ports};
 use rouille::{input::json_input, router, start_server, Response};
 use rust_embed::RustEmbed;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
-
-use crate::app;
 
 #[derive(RustEmbed)]
 #[folder = "assets/"]
@@ -47,9 +46,9 @@ struct ReadBookmarksResponse {
 
 pub fn run(
     url: &str,
-    event_store: Arc<dyn app::EventStore>,
-    read_model: Arc<dyn app::ReadModel>,
-    clock: Arc<dyn app::Clock>,
+    event_store: Arc<dyn ports::EventStore>,
+    read_model: Arc<dyn ports::ReadModel>,
+    clock: Arc<dyn ports::Clock>,
 ) {
     start_server(url, move |req| -> Response {
         router!(

@@ -1,4 +1,4 @@
-use crate::app;
+use crate::{app, ports};
 use axum::{
     body::{self, Full},
     extract::{Path, State},
@@ -19,15 +19,15 @@ use uuid::Uuid;
 struct Asset;
 
 struct ServiceDependencies {
-    clock: Arc<dyn app::Clock>,
-    event_store: Arc<dyn app::EventStore>,
-    read_model: Arc<dyn app::ReadModel>,
+    clock: Arc<dyn ports::Clock>,
+    event_store: Arc<dyn ports::EventStore>,
+    read_model: Arc<dyn ports::ReadModel>,
 }
 
 pub fn create_router(
-    event_store: Arc<dyn app::EventStore>,
-    read_model: Arc<dyn app::ReadModel>,
-    clock: Arc<dyn app::Clock>,
+    event_store: Arc<dyn ports::EventStore>,
+    read_model: Arc<dyn ports::ReadModel>,
+    clock: Arc<dyn ports::Clock>,
 ) -> Router {
     let deps = Arc::new(ServiceDependencies {
         event_store: event_store.clone(),

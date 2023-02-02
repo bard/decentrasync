@@ -1,10 +1,9 @@
+use crate::{app, ports::EventStore, ports::EventStoreError};
 use std::{
     ffi::{OsStr, OsString},
     path::Path,
     time::UNIX_EPOCH,
 };
-
-use crate::app::{DomainEvent, EventStore, EventStoreError};
 
 pub struct FileSystemEventStore {
     log_folder_path: OsString,
@@ -19,11 +18,11 @@ impl FileSystemEventStore {
 }
 
 impl EventStore for FileSystemEventStore {
-    fn import_event(&self, _event: DomainEvent) {
+    fn import_event(&self, _event: app::DomainEvent) -> Result<(), EventStoreError> {
         todo!()
     }
 
-    fn store_event(&self, event: DomainEvent) -> Result<(), EventStoreError> {
+    fn store_event(&self, event: app::DomainEvent) -> Result<(), EventStoreError> {
         let timestamp_millis = event
             .meta
             .created_at
@@ -47,7 +46,8 @@ mod tests {
     use std::time::Duration;
 
     use crate::adapters::clock::FakeClock;
-    use crate::app::{Clock, DomainEventMeta, DomainEventPayload};
+    use crate::app::{DomainEventMeta, DomainEventPayload};
+    use crate::ports::Clock;
 
     use super::*;
     use assert_fs::assert::PathAssert;
@@ -62,7 +62,7 @@ mod tests {
         let event_store = FileSystemEventStore::new(log_folder_path);
 
         clock.advance(Duration::from_secs(10));
-        let event = DomainEvent {
+        let event = app::DomainEvent {
             meta: DomainEventMeta {
                 created_at: clock.now(),
             },
@@ -73,7 +73,7 @@ mod tests {
             },
         };
 
-        event_store.store_event(event);
+        event_store.store_event(event).unwrap();
 
         let event_file = temp.child("10000.json");
         event_file.assert("{\"meta\":{\"created_at\":{\"secs_since_epoch\":10,\"nanos_since_epoch\":0}},\"payload\":{\"BookmarkCreated\":{\"id\":\"123\",\"url\":\"https://example.com\",\"title\":\"Example\"}}}");

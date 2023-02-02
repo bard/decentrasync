@@ -1,9 +1,8 @@
+use crate::ports::Clock;
 use std::{
     sync::{Arc, RwLock},
     time::{Duration, SystemTime},
 };
-
-use crate::app::Clock;
 
 pub struct SystemClock {}
 

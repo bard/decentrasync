@@ -1,3 +1,4 @@
+use crate::ports::{EventStoreError, ReadModelError};
 use serde::Serialize;
 use std::{sync::Arc, time::SystemTime};
 
@@ -48,33 +49,6 @@ pub struct BookmarkQuery {
     pub id: BookmarkId,
 }
 
-pub trait EventStore: Send + Sync {
-    fn store_event(&self, event: DomainEvent) -> Result<(), EventStoreError>;
-    fn import_event(&self, event: DomainEvent);
-}
-
-#[derive(thiserror::Error, Debug)]
-pub enum EventStoreError {
-    #[error("Generic event store error")]
-    Generic,
-}
-
-pub trait ReadModel: Send + Sync {
-    fn update(&self, event: &DomainEvent) -> Result<(), ReadModelError>;
-    fn read_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark>;
-    fn read_bookmarks(&self) -> Option<Vec<Bookmark>>;
-}
-
-#[derive(thiserror::Error, Debug)]
-pub enum ReadModelError {
-    #[error("Generic read model error")]
-    Generic,
-}
-
-pub trait Clock: Send + Sync {
-    fn now(&self) -> SystemTime;
-}
-
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
     #[error("Read model error")]
@@ -84,6 +58,8 @@ pub enum AppError {
 }
 
 pub mod query {
+    use crate::ports::ReadModel;
+
     use super::*;
 
     pub fn read_bookmark(query: BookmarkQuery, read_model: Arc<dyn ReadModel>) -> Option<Bookmark> {
@@ -96,6 +72,8 @@ pub mod query {
 }
 
 pub mod command {
+
+    use crate::ports::{Clock, EventStore, ReadModel};
 
     use super::*;
 
@@ -117,7 +95,7 @@ pub mod command {
             .map_err(AppError::ReadModelError)?;
         event_store
             .store_event(event)
-            .map_err(AppError::EventStoreError);
+            .map_err(AppError::EventStoreError)?;
 
         Ok(())
     }
@@ -139,10 +117,12 @@ pub mod command {
             },
         };
 
-        read_model.update(&event).map_err(AppError::ReadModelError);
+        read_model
+            .update(&event)
+            .map_err(AppError::ReadModelError)?;
         event_store
             .store_event(event)
-            .map_err(AppError::EventStoreError);
+            .map_err(AppError::EventStoreError)?;
 
         Ok(())
     }
