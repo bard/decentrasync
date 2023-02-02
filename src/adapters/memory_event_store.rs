@@ -1,5 +1,5 @@
 use crate::{
-    app::DomainEvent,
+    data::DomainEvent,
     ports::{EventStore, EventStoreError},
 };
 use std::sync::Mutex;
@@ -38,7 +38,7 @@ mod tests {
     use crate::ports::Clock;
     use crate::{
         adapters::clock::FakeClock,
-        app::{DomainEventMeta, DomainEventPayload},
+        data::{DomainEventMeta, DomainEventPayload},
     };
 
     #[test]

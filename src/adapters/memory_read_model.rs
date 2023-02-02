@@ -1,4 +1,4 @@
-use crate::app::{Bookmark, BookmarkId, BookmarkQuery, DomainEvent, DomainEventPayload};
+use crate::data::{Bookmark, BookmarkId, BookmarkQuery, DomainEvent, DomainEventPayload};
 use crate::ports::{ReadModel, ReadModelError};
 use std::{collections::HashMap, sync::Mutex};
 
@@ -71,7 +71,7 @@ impl ReadModel for MemoryReadModel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{adapters::clock::FakeClock, app::DomainEventMeta, ports::Clock};
+    use crate::{adapters::clock::FakeClock, data::DomainEventMeta, ports::Clock};
 
     #[test]
     fn test_read_model_exposes_bookmark_by_id() {

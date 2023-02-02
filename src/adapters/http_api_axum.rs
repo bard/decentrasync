@@ -1,4 +1,8 @@
-use crate::{app, ports};
+use crate::{
+    app,
+    data::{Bookmark, BookmarkQuery},
+    ports,
+};
 use axum::{
     body::{self, Full},
     extract::{Path, State},
@@ -106,7 +110,7 @@ async fn create_bookmark(
     let id = Uuid::new_v4().to_string();
 
     match app::command::create_bookmark(
-        app::Bookmark {
+        Bookmark {
             id: id.clone(),
             url: payload.url,
             title: payload.title,
@@ -172,7 +176,7 @@ async fn read_bookmark(
     State(state): State<Arc<ServiceDependencies>>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    match app::query::read_bookmark(app::BookmarkQuery { id }, state.read_model.clone()) {
+    match app::query::read_bookmark(BookmarkQuery { id }, state.read_model.clone()) {
         Some(bookmark) => (
             StatusCode::OK,
             Json(ReadBookmarkResponsePayload {

@@ -1,4 +1,8 @@
-use crate::{app, ports};
+use crate::{
+    app,
+    data::{Bookmark, BookmarkQuery},
+    ports,
+};
 use rouille::{input::json_input, router, start_server, Response};
 use rust_embed::RustEmbed;
 use serde::{Deserialize, Serialize};
@@ -54,7 +58,7 @@ pub fn run(
         router!(
             req,
             (GET) (/api/bookmarks/{id: String}) => {
-                match app::query::read_bookmark(app::BookmarkQuery { id }, read_model.clone()) {
+                match app::query::read_bookmark(BookmarkQuery { id }, read_model.clone()) {
                     Some(bookmark) => Response::json(&ReadResponse{
                         id: bookmark.id,
                         url: bookmark.url,
@@ -80,7 +84,7 @@ pub fn run(
                     Ok(data) => {
                         let id = Uuid::new_v4().to_string();
 
-                        app::command::create_bookmark(app::Bookmark {
+                        app::command::create_bookmark(Bookmark {
                             id: id.clone(),
                             url: data.url,
                             title: data.title

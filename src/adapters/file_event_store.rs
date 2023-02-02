@@ -1,4 +1,4 @@
-use crate::{app, ports::EventStore, ports::EventStoreError};
+use crate::{data::DomainEvent, ports::EventStore, ports::EventStoreError};
 use std::{
     ffi::{OsStr, OsString},
     path::Path,
@@ -18,11 +18,11 @@ impl FileSystemEventStore {
 }
 
 impl EventStore for FileSystemEventStore {
-    fn import_event(&self, _event: app::DomainEvent) -> Result<(), EventStoreError> {
+    fn import_event(&self, _event: DomainEvent) -> Result<(), EventStoreError> {
         todo!()
     }
 
-    fn store_event(&self, event: app::DomainEvent) -> Result<(), EventStoreError> {
+    fn store_event(&self, event: DomainEvent) -> Result<(), EventStoreError> {
         let timestamp_millis = event
             .meta
             .created_at
@@ -46,7 +46,7 @@ mod tests {
     use std::time::Duration;
 
     use crate::adapters::clock::FakeClock;
-    use crate::app::{DomainEventMeta, DomainEventPayload};
+    use crate::data::{DomainEventMeta, DomainEventPayload};
     use crate::ports::Clock;
 
     use super::*;
@@ -62,7 +62,7 @@ mod tests {
         let event_store = FileSystemEventStore::new(log_folder_path);
 
         clock.advance(Duration::from_secs(10));
-        let event = app::DomainEvent {
+        let event = DomainEvent {
             meta: DomainEventMeta {
                 created_at: clock.now(),
             },

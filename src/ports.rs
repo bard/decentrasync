@@ -1,4 +1,4 @@
-use crate::app::{Bookmark, BookmarkQuery, DomainEvent};
+use crate::data::{Bookmark, BookmarkQuery, DomainEvent};
 use std::time::SystemTime;
 
 pub trait EventStore: Send + Sync {
