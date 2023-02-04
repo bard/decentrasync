@@ -1,8 +1,8 @@
-use crate::data::{Aggregate, BookmarkData, DomainError};
-use crate::domain::commands::BookmarkCommand;
 use crate::{
-    data::{DomainEvent, DomainEventMeta},
     domain::aggregates::BookmarkAggregate,
+    domain::commands::BookmarkCommand,
+    domain::data::{Aggregate, BookmarkData, DomainEvent, DomainEventMeta},
+    domain::errors::DomainError,
     ports::{Clock, EventStore, ReadModel},
 };
 use std::sync::Arc;
@@ -120,7 +120,7 @@ mod tests {
             clock::FakeClock, memory_event_store::MemoryEventStore,
             memory_read_model::MemoryReadModel,
         },
-        data::BookmarkData,
+        domain::data::BookmarkData,
     };
 
     #[test]

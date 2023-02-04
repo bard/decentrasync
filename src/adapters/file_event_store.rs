@@ -1,4 +1,4 @@
-use crate::{data::DomainEvent, ports::EventStore, ports::EventStoreError};
+use crate::{domain::data::DomainEvent, ports::EventStore, ports::EventStoreError};
 use std::{
     ffi::{OsStr, OsString},
     path::Path,
@@ -54,7 +54,7 @@ mod tests {
     use std::time::Duration;
 
     use crate::adapters::clock::FakeClock;
-    use crate::data::DomainEventMeta;
+    use crate::domain::data::DomainEventMeta;
     use crate::domain::events::{BookmarkEventPayload, DomainEventPayload};
     use crate::ports::Clock;
 

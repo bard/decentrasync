@@ -1,4 +1,4 @@
-use crate::domain::events::DomainEventPayload;
+use super::{errors::DomainError, events::DomainEventPayload};
 use serde::Serialize;
 use std::time::SystemTime;
 
@@ -12,16 +12,6 @@ pub struct BookmarkData {
 #[derive(std::fmt::Debug)]
 pub struct BookmarkQuery {
     pub id: String,
-}
-
-#[derive(thiserror::Error, Debug, PartialEq)]
-pub enum DomainError {
-    #[error("No such bookmark")]
-    NoSuchBookmark,
-    #[error("Bookmark already exists")]
-    BookmarkAlreadyExists,
-    #[error("Generic")]
-    GenericError,
 }
 
 #[derive(std::fmt::Debug, PartialEq, Eq, Clone, Serialize)]

@@ -1,5 +1,5 @@
 use crate::{
-    data::DomainEvent,
+    domain::data::DomainEvent,
     domain::events::{BookmarkEventPayload, DomainEventPayload},
     ports::{EventStore, EventStoreError},
 };
@@ -36,15 +36,15 @@ impl EventStore for MemoryEventStore {
             .unwrap()
             .iter()
             .filter(|e| match &e.payload {
-                DomainEventPayload::Bookmark(
-                    BookmarkEventPayload::Created { id, .. },
-                ) => *id == aggregate_id,
-                DomainEventPayload::Bookmark(
-                    BookmarkEventPayload::Deleted { id },
-                ) => *id == aggregate_id,
-                DomainEventPayload::Bookmark(
-                    BookmarkEventPayload::TitleUpdated { id, .. },
-                ) => *id == aggregate_id,
+                DomainEventPayload::Bookmark(BookmarkEventPayload::Created { id, .. }) => {
+                    *id == aggregate_id
+                }
+                DomainEventPayload::Bookmark(BookmarkEventPayload::Deleted { id }) => {
+                    *id == aggregate_id
+                }
+                DomainEventPayload::Bookmark(BookmarkEventPayload::TitleUpdated { id, .. }) => {
+                    *id == aggregate_id
+                }
                 _ => todo!(),
             })
             .map(|e| e.clone())
@@ -58,7 +58,7 @@ mod tests {
 
     use super::*;
     use crate::ports::Clock;
-    use crate::{adapters::clock::FakeClock, data::DomainEventMeta};
+    use crate::{adapters::clock::FakeClock, domain::data::DomainEventMeta};
 
     #[test]
     fn test_importing_an_event_sorts_the_log() {
@@ -70,13 +70,11 @@ mod tests {
             meta: DomainEventMeta {
                 created_at: earlier_external_event_time,
             },
-            payload: DomainEventPayload::Bookmark(
-                BookmarkEventPayload::Created {
-                    id: String::from("abc"),
-                    url: String::from("https://google.com"),
-                    title: String::from("Google"),
-                },
-            ),
+            payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
+                id: String::from("abc"),
+                url: String::from("https://google.com"),
+                title: String::from("Google"),
+            }),
         };
 
         clock.advance(Duration::from_secs(10));
@@ -85,13 +83,11 @@ mod tests {
             meta: DomainEventMeta {
                 created_at: later_local_event_time,
             },
-            payload: DomainEventPayload::Bookmark(
-                BookmarkEventPayload::Created {
-                    id: String::from("123"),
-                    url: String::from("https://example.com"),
-                    title: String::from("Example"),
-                },
-            ),
+            payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
+                id: String::from("123"),
+                url: String::from("https://example.com"),
+                title: String::from("Example"),
+            }),
         };
 
         event_store.store_event(later_local_event).unwrap();

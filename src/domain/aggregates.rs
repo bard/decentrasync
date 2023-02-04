@@ -1,7 +1,7 @@
-use crate::data::{Aggregate, DomainError, DomainEvent};
-
 use super::{
     commands::BookmarkCommand,
+    data::{Aggregate, DomainEvent},
+    errors::DomainError,
     events::{BookmarkEventPayload, DomainEventPayload},
 };
 
@@ -69,27 +69,19 @@ impl Aggregate for BookmarkAggregate {
 
     fn apply_event(&mut self, event: &DomainEvent) {
         match &event.payload {
-            DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
-                id,
-                url,
-                title,
-            }) => {
+            DomainEventPayload::Bookmark(BookmarkEventPayload::Created { id, url, title }) => {
                 if *id == self.id {
                     self.state = State::Created;
                     self.title = title.clone();
                     self.url = url.clone();
                 }
             }
-            DomainEventPayload::Bookmark(BookmarkEventPayload::Deleted {
-                id,
-            }) => {
+            DomainEventPayload::Bookmark(BookmarkEventPayload::Deleted { id }) => {
                 if *id == self.id {
                     self.state = State::Deleted;
                 }
             }
-            DomainEventPayload::Bookmark(
-                BookmarkEventPayload::TitleUpdated { id, title },
-            ) => {
+            DomainEventPayload::Bookmark(BookmarkEventPayload::TitleUpdated { id, title }) => {
                 if *id == self.id {
                     self.title = title.clone();
                 }
@@ -102,7 +94,7 @@ impl Aggregate for BookmarkAggregate {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{adapters::clock::FakeClock, data::DomainEventMeta, ports::Clock};
+    use crate::{adapters::clock::FakeClock, domain::data::DomainEventMeta, ports::Clock};
 
     #[test]
     fn test_deleted_bookmark_cannot_be_acted_upon() {
@@ -112,23 +104,19 @@ mod tests {
             meta: DomainEventMeta {
                 created_at: clock.now(),
             },
-            payload: DomainEventPayload::Bookmark(
-                BookmarkEventPayload::Created {
-                    id: "123456".to_owned(),
-                    url: "https://example.com".to_owned(),
-                    title: "Example".to_owned(),
-                },
-            ),
+            payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
+                id: "123456".to_owned(),
+                url: "https://example.com".to_owned(),
+                title: "Example".to_owned(),
+            }),
         });
         bookmark.apply_event(&DomainEvent {
             meta: DomainEventMeta {
                 created_at: clock.now(),
             },
-            payload: DomainEventPayload::Bookmark(
-                BookmarkEventPayload::Deleted {
-                    id: "123456".to_owned(),
-                },
-            ),
+            payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Deleted {
+                id: "123456".to_owned(),
+            }),
         });
 
         let err = bookmark
@@ -148,13 +136,11 @@ mod tests {
             meta: DomainEventMeta {
                 created_at: clock.now(),
             },
-            payload: DomainEventPayload::Bookmark(
-                BookmarkEventPayload::Created {
-                    id: "123456".to_owned(),
-                    url: "https://example.com".to_owned(),
-                    title: "Example".to_owned(),
-                },
-            ),
+            payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
+                id: "123456".to_owned(),
+                url: "https://example.com".to_owned(),
+                title: "Example".to_owned(),
+            }),
         });
 
         let err = bookmark

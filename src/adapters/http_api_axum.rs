@@ -1,4 +1,4 @@
-use crate::{app, data::DomainError, ports};
+use crate::{app, domain::errors::DomainError, ports};
 use axum::{
     body::{self, Full},
     extract::{Path, State},

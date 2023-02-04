@@ -1,4 +1,4 @@
-use crate::data::{BookmarkData, DomainEvent};
+use crate::domain::data::{BookmarkData, DomainEvent};
 use crate::domain::events::{BookmarkEventPayload, DomainEventPayload};
 use crate::ports::{ReadModel, ReadModelError};
 use std::{collections::HashMap, sync::Mutex};
@@ -19,11 +19,7 @@ impl ReadModel for MemoryReadModel {
         let mut bookmarks_by_id = self.bookmarks_by_id.lock().unwrap();
 
         match &event.payload {
-            DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
-                id,
-                url,
-                title,
-            }) => {
+            DomainEventPayload::Bookmark(BookmarkEventPayload::Created { id, url, title }) => {
                 if bookmarks_by_id.contains_key(id) {
                     Err(ReadModelError::Generic)
                 } else {
@@ -38,15 +34,11 @@ impl ReadModel for MemoryReadModel {
                     Ok(())
                 }
             }
-            DomainEventPayload::Bookmark(BookmarkEventPayload::Deleted {
-                id,
-            }) => {
+            DomainEventPayload::Bookmark(BookmarkEventPayload::Deleted { id }) => {
                 bookmarks_by_id.remove(id);
                 Ok(())
             }
-            DomainEventPayload::Bookmark(
-                BookmarkEventPayload::TitleUpdated { id, title },
-            ) => {
+            DomainEventPayload::Bookmark(BookmarkEventPayload::TitleUpdated { id, title }) => {
                 bookmarks_by_id
                     .entry(id.to_string())
                     .and_modify(|bookmark| {
@@ -81,7 +73,7 @@ impl ReadModel for MemoryReadModel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{adapters::clock::FakeClock, data::DomainEventMeta, ports::Clock};
+    use crate::{adapters::clock::FakeClock, domain::data::DomainEventMeta, ports::Clock};
 
     #[test]
     fn test_read_model_exposes_bookmark_by_id() {
@@ -93,13 +85,11 @@ mod tests {
                 meta: DomainEventMeta {
                     created_at: clock.now(),
                 },
-                payload: DomainEventPayload::Bookmark(
-                    BookmarkEventPayload::Created {
-                        id: String::from("123"),
-                        url: String::from("https://example.com"),
-                        title: String::from("Example"),
-                    },
-                ),
+                payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
+                    id: String::from("123"),
+                    url: String::from("https://example.com"),
+                    title: String::from("Example"),
+                }),
             })
             .unwrap();
 
