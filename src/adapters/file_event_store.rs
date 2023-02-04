@@ -33,7 +33,11 @@ impl EventStore for FileSystemEventStore {
         let stored_event_path =
             Path::new(self.log_folder_path.as_os_str()).join(format!("{}.json", timestamp_millis));
 
-        std::fs::write(stored_event_path, serde_json::to_string(&event).unwrap()).unwrap();
+        std::fs::write(
+            stored_event_path,
+            serde_json::to_string_pretty(&event).unwrap(),
+        )
+        .unwrap();
 
         Ok(())
     }
@@ -51,7 +55,7 @@ mod tests {
 
     use crate::adapters::clock::FakeClock;
     use crate::data::DomainEventMeta;
-    use crate::domain::events::DomainEventPayload;
+    use crate::domain::events::{BookmarkEventPayload, DomainEventPayload};
     use crate::ports::Clock;
 
     use super::*;
@@ -71,17 +75,34 @@ mod tests {
             meta: DomainEventMeta {
                 created_at: clock.now(),
             },
-            payload: DomainEventPayload::BookmarkCreated {
+            payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
                 id: "123".to_string(),
                 url: "https://example.com".to_string(),
                 title: "Example".to_string(),
-            },
+            }),
         };
 
         event_store.store_event(event).unwrap();
 
         let event_file = temp.child("10000.json");
-        event_file.assert("{\"meta\":{\"created_at\":{\"secs_since_epoch\":10,\"nanos_since_epoch\":0}},\"payload\":{\"BookmarkCreated\":{\"id\":\"123\",\"url\":\"https://example.com\",\"title\":\"Example\"}}}");
+        event_file.assert(
+            r#"{
+  "meta": {
+    "created_at": {
+      "secs_since_epoch": 10,
+      "nanos_since_epoch": 0
+    }
+  },
+  "payload": {
+    "aggregate": "Bookmark",
+    "type": "Created",
+    "id": "123",
+    "url": "https://example.com",
+    "title": "Example"
+  }
+}"#,
+        );
+
         temp.close().unwrap();
     }
 }

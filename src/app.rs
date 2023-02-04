@@ -58,7 +58,8 @@ pub fn create_bookmark(
         bookmark_aggregate.apply_event(&event);
     }
 
-    let event_payload = bookmark_aggregate.handle_command(&BookmarkCommand::BookmarkPage { url, title })?;
+    let event_payload =
+        bookmark_aggregate.handle_command(&BookmarkCommand::BookmarkPage { url, title })?;
 
     let event = DomainEvent {
         meta: DomainEventMeta {
@@ -89,7 +90,8 @@ pub fn update_bookmark_title(
         bookmark_aggregate.apply_event(&event);
     }
 
-    let event_payload = bookmark_aggregate.handle_command(&BookmarkCommand::UpdateTitle { title })?;
+    let event_payload =
+        bookmark_aggregate.handle_command(&BookmarkCommand::UpdateTitle { title })?;
 
     let event = DomainEvent {
         meta: DomainEventMeta {

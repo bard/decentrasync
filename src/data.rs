@@ -1,7 +1,6 @@
+use crate::domain::events::DomainEventPayload;
 use serde::Serialize;
 use std::time::SystemTime;
-
-use crate::domain::events::DomainEventPayload;
 
 #[derive(std::fmt::Debug, PartialEq, Eq, Clone)]
 pub struct BookmarkData {
@@ -38,6 +37,7 @@ pub struct DomainEventMeta {
 
 pub trait Aggregate {
     type Command;
+
     fn apply_event(&mut self, event: &DomainEvent);
     fn handle_command(&self, command: &Self::Command) -> Result<DomainEventPayload, DomainError>;
 }

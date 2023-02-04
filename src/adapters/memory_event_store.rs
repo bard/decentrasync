@@ -1,6 +1,6 @@
 use crate::{
     data::DomainEvent,
-    domain::events::DomainEventPayload,
+    domain::events::{BookmarkEventPayload, DomainEventPayload},
     ports::{EventStore, EventStoreError},
 };
 use std::sync::Mutex;
@@ -36,9 +36,16 @@ impl EventStore for MemoryEventStore {
             .unwrap()
             .iter()
             .filter(|e| match &e.payload {
-                DomainEventPayload::BookmarkCreated { id, .. } => *id == aggregate_id,
-                DomainEventPayload::BookmarkDeleted { id } => *id == aggregate_id,
-                DomainEventPayload::BookmarkTitleUpdated { id, .. } => *id == aggregate_id,
+                DomainEventPayload::Bookmark(
+                    BookmarkEventPayload::Created { id, .. },
+                ) => *id == aggregate_id,
+                DomainEventPayload::Bookmark(
+                    BookmarkEventPayload::Deleted { id },
+                ) => *id == aggregate_id,
+                DomainEventPayload::Bookmark(
+                    BookmarkEventPayload::TitleUpdated { id, .. },
+                ) => *id == aggregate_id,
+                _ => todo!(),
             })
             .map(|e| e.clone())
             .collect()
@@ -63,11 +70,13 @@ mod tests {
             meta: DomainEventMeta {
                 created_at: earlier_external_event_time,
             },
-            payload: DomainEventPayload::BookmarkCreated {
-                id: String::from("abc"),
-                url: String::from("https://google.com"),
-                title: String::from("Google"),
-            },
+            payload: DomainEventPayload::Bookmark(
+                BookmarkEventPayload::Created {
+                    id: String::from("abc"),
+                    url: String::from("https://google.com"),
+                    title: String::from("Google"),
+                },
+            ),
         };
 
         clock.advance(Duration::from_secs(10));
@@ -76,11 +85,13 @@ mod tests {
             meta: DomainEventMeta {
                 created_at: later_local_event_time,
             },
-            payload: DomainEventPayload::BookmarkCreated {
-                id: String::from("123"),
-                url: String::from("https://example.com"),
-                title: String::from("Example"),
-            },
+            payload: DomainEventPayload::Bookmark(
+                BookmarkEventPayload::Created {
+                    id: String::from("123"),
+                    url: String::from("https://example.com"),
+                    title: String::from("Example"),
+                },
+            ),
         };
 
         event_store.store_event(later_local_event).unwrap();

@@ -1,6 +1,9 @@
 use crate::data::{Aggregate, DomainError, DomainEvent};
 
-use super::{commands::BookmarkCommand, events::DomainEventPayload};
+use super::{
+    commands::BookmarkCommand,
+    events::{BookmarkEventPayload, DomainEventPayload},
+};
 
 enum State {
     Nonexistent,
@@ -34,49 +37,64 @@ impl Aggregate for BookmarkAggregate {
             BookmarkCommand::BookmarkPage { url, title } => match self.state {
                 State::Deleted => Err(DomainError::NoSuchBookmark),
                 State::Created => Err(DomainError::BookmarkAlreadyExists),
-                State::Nonexistent => Ok(DomainEventPayload::BookmarkCreated {
-                    id: self.id.clone(),
-                    url: url.clone(),
-                    title: title.clone(),
-                }),
+                State::Nonexistent => Ok(DomainEventPayload::Bookmark(
+                    BookmarkEventPayload::Created {
+                        id: self.id.clone(),
+                        url: url.clone(),
+                        title: title.clone(),
+                    },
+                )),
             },
             BookmarkCommand::Delete => match self.state {
                 State::Deleted => Err(DomainError::NoSuchBookmark),
                 State::Nonexistent => Err(DomainError::NoSuchBookmark),
-                State::Created => Ok(DomainEventPayload::BookmarkDeleted {
-                    id: self.id.clone(),
-                }),
+                State::Created => Ok(DomainEventPayload::Bookmark(
+                    BookmarkEventPayload::Deleted {
+                        id: self.id.clone(),
+                    },
+                )),
             },
             BookmarkCommand::UpdateTitle { title } => match self.state {
                 State::Deleted => Err(DomainError::NoSuchBookmark),
                 State::Nonexistent => Err(DomainError::NoSuchBookmark),
-                State::Created => Ok(DomainEventPayload::BookmarkTitleUpdated {
-                    id: self.id.clone(),
-                    title: title.clone(),
-                }),
+                State::Created => Ok(DomainEventPayload::Bookmark(
+                    BookmarkEventPayload::TitleUpdated {
+                        id: self.id.clone(),
+                        title: title.clone(),
+                    },
+                )),
             },
         }
     }
 
     fn apply_event(&mut self, event: &DomainEvent) {
         match &event.payload {
-            DomainEventPayload::BookmarkCreated { id, url, title } => {
+            DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
+                id,
+                url,
+                title,
+            }) => {
                 if *id == self.id {
                     self.state = State::Created;
                     self.title = title.clone();
                     self.url = url.clone();
                 }
             }
-            DomainEventPayload::BookmarkDeleted { id } => {
+            DomainEventPayload::Bookmark(BookmarkEventPayload::Deleted {
+                id,
+            }) => {
                 if *id == self.id {
                     self.state = State::Deleted;
                 }
             }
-            DomainEventPayload::BookmarkTitleUpdated { id, title } => {
+            DomainEventPayload::Bookmark(
+                BookmarkEventPayload::TitleUpdated { id, title },
+            ) => {
                 if *id == self.id {
                     self.title = title.clone();
                 }
             }
+            _ => (),
         }
     }
 }
@@ -94,19 +112,23 @@ mod tests {
             meta: DomainEventMeta {
                 created_at: clock.now(),
             },
-            payload: DomainEventPayload::BookmarkCreated {
-                id: "123456".to_owned(),
-                url: "https://example.com".to_owned(),
-                title: "Example".to_owned(),
-            },
+            payload: DomainEventPayload::Bookmark(
+                BookmarkEventPayload::Created {
+                    id: "123456".to_owned(),
+                    url: "https://example.com".to_owned(),
+                    title: "Example".to_owned(),
+                },
+            ),
         });
         bookmark.apply_event(&DomainEvent {
             meta: DomainEventMeta {
                 created_at: clock.now(),
             },
-            payload: DomainEventPayload::BookmarkDeleted {
-                id: "123456".to_owned(),
-            },
+            payload: DomainEventPayload::Bookmark(
+                BookmarkEventPayload::Deleted {
+                    id: "123456".to_owned(),
+                },
+            ),
         });
 
         let err = bookmark
@@ -126,11 +148,13 @@ mod tests {
             meta: DomainEventMeta {
                 created_at: clock.now(),
             },
-            payload: DomainEventPayload::BookmarkCreated {
-                id: "123456".to_owned(),
-                url: "https://example.com".to_owned(),
-                title: "Example".to_owned(),
-            },
+            payload: DomainEventPayload::Bookmark(
+                BookmarkEventPayload::Created {
+                    id: "123456".to_owned(),
+                    url: "https://example.com".to_owned(),
+                    title: "Example".to_owned(),
+                },
+            ),
         });
 
         let err = bookmark

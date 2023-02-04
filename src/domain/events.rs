@@ -1,17 +1,30 @@
 use serde::Serialize;
 
 #[derive(std::fmt::Debug, PartialEq, Eq, Clone, Serialize)]
-pub enum DomainEventPayload {
-    BookmarkCreated {
+#[serde(tag = "type")]
+pub enum BookmarkEventPayload {
+    Created {
         id: String,
         url: String,
         title: String,
     },
-    BookmarkDeleted {
+    Deleted {
         id: String,
     },
-    BookmarkTitleUpdated {
+    TitleUpdated {
         id: String,
         title: String,
     },
+}
+
+#[derive(std::fmt::Debug, PartialEq, Eq, Clone, Serialize)]
+pub enum OtherEventPayload {
+    SomethingHappened,
+}
+
+#[derive(std::fmt::Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(tag = "aggregate")]
+pub enum DomainEventPayload {
+    Bookmark(BookmarkEventPayload),
+    Other(OtherEventPayload),
 }
