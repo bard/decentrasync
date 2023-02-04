@@ -1,14 +1,15 @@
-use crate::data::{Bookmark, BookmarkId, BookmarkQuery, DomainEvent, DomainEventPayload};
+use crate::data::{BookmarkData, DomainEvent};
+use crate::domain::events::DomainEventPayload;
 use crate::ports::{ReadModel, ReadModelError};
 use std::{collections::HashMap, sync::Mutex};
 
 pub struct MemoryReadModel {
-    bookmarks_by_id: Mutex<HashMap<BookmarkId, Bookmark>>,
+    bookmarks_by_id: Mutex<HashMap<String, BookmarkData>>,
 }
 
 impl MemoryReadModel {
     pub fn new() -> Self {
-        let bookmarks_by_id: Mutex<HashMap<BookmarkId, Bookmark>> = Mutex::new(HashMap::new());
+        let bookmarks_by_id: Mutex<HashMap<String, BookmarkData>> = Mutex::new(HashMap::new());
         Self { bookmarks_by_id }
     }
 }
@@ -24,7 +25,7 @@ impl ReadModel for MemoryReadModel {
                 } else {
                     bookmarks_by_id.insert(
                         id.to_string(),
-                        Bookmark {
+                        BookmarkData {
                             id: id.to_string(),
                             url: url.to_string(),
                             title: title.to_string(),
@@ -41,7 +42,7 @@ impl ReadModel for MemoryReadModel {
                 bookmarks_by_id
                     .entry(id.to_string())
                     .and_modify(|bookmark| {
-                        *bookmark = Bookmark {
+                        *bookmark = BookmarkData {
                             id: bookmark.id.clone(),
                             url: bookmark.url.clone(),
                             title: title.clone(),
@@ -52,16 +53,16 @@ impl ReadModel for MemoryReadModel {
         }
     }
 
-    fn read_bookmarks(&self) -> Option<Vec<Bookmark>> {
+    fn read_bookmarks(&self) -> Option<Vec<BookmarkData>> {
         let bookmarks_by_id = self.bookmarks_by_id.lock().unwrap();
-        let mut items: Vec<Bookmark> = bookmarks_by_id.values().cloned().collect();
+        let mut items: Vec<BookmarkData> = bookmarks_by_id.values().cloned().collect();
         items.sort_unstable_by_key(|b| b.id.clone());
         return Some(items);
     }
 
-    fn read_bookmark(&self, query: &BookmarkQuery) -> Option<Bookmark> {
+    fn read_bookmark(&self, id: &str) -> Option<BookmarkData> {
         let bookmarks_by_id = self.bookmarks_by_id.lock().unwrap();
-        match bookmarks_by_id.get(&query.id) {
+        match bookmarks_by_id.get(id) {
             Some(bookmark) => Some(bookmark.clone()),
             None => None,
         }
@@ -91,11 +92,7 @@ mod tests {
             })
             .unwrap();
 
-        let bookmark = read_model
-            .read_bookmark(&BookmarkQuery {
-                id: "123".to_string(),
-            })
-            .unwrap();
+        let bookmark = read_model.read_bookmark("123").unwrap();
 
         assert_eq!(bookmark.url, "https://example.com");
     }

@@ -1,7 +1,29 @@
 use serde::Serialize;
 use std::time::SystemTime;
 
-pub type BookmarkId = String;
+use crate::domain::events::DomainEventPayload;
+
+#[derive(std::fmt::Debug, PartialEq, Eq, Clone)]
+pub struct BookmarkData {
+    pub id: String,
+    pub url: String,
+    pub title: String,
+}
+
+#[derive(std::fmt::Debug)]
+pub struct BookmarkQuery {
+    pub id: String,
+}
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum DomainError {
+    #[error("No such bookmark")]
+    NoSuchBookmark,
+    #[error("Bookmark already exists")]
+    BookmarkAlreadyExists,
+    #[error("Generic")]
+    GenericError,
+}
 
 #[derive(std::fmt::Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct DomainEvent {
@@ -14,36 +36,8 @@ pub struct DomainEventMeta {
     pub created_at: SystemTime,
 }
 
-#[derive(std::fmt::Debug, PartialEq, Eq, Clone, Serialize)]
-pub enum DomainEventPayload {
-    BookmarkCreated {
-        id: BookmarkId,
-        url: String,
-        title: String,
-    },
-    BookmarkDeleted {
-        id: BookmarkId,
-    },
-    BookmarkTitleUpdated {
-        id: BookmarkId,
-        title: String,
-    },
-}
-
-#[derive(std::fmt::Debug, PartialEq, Eq, Clone)]
-pub struct Bookmark {
-    pub id: BookmarkId,
-    pub url: String,
-    pub title: String,
-}
-
-#[derive(std::fmt::Debug)]
-pub struct BookmarkInput {
-    pub url: String,
-    pub title: String,
-}
-
-#[derive(std::fmt::Debug)]
-pub struct BookmarkQuery {
-    pub id: BookmarkId,
+pub trait Aggregate {
+    type Command;
+    fn apply_event(&mut self, event: &DomainEvent);
+    fn handle_command(&self, command: &Self::Command) -> Result<DomainEventPayload, DomainError>;
 }

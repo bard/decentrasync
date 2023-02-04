@@ -1,5 +1,6 @@
 use crate::{
     data::DomainEvent,
+    domain::events::DomainEventPayload,
     ports::{EventStore, EventStoreError},
 };
 use std::sync::Mutex;
@@ -28,6 +29,20 @@ impl EventStore for MemoryEventStore {
         lock.push(event);
         Ok(())
     }
+
+    fn get_events_for_aggregate(&self, aggregate_id: String) -> Vec<DomainEvent> {
+        self.events
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|e| match &e.payload {
+                DomainEventPayload::BookmarkCreated { id, .. } => *id == aggregate_id,
+                DomainEventPayload::BookmarkDeleted { id } => *id == aggregate_id,
+                DomainEventPayload::BookmarkTitleUpdated { id, .. } => *id == aggregate_id,
+            })
+            .map(|e| e.clone())
+            .collect()
+    }
 }
 
 #[cfg(test)]
@@ -36,10 +51,7 @@ mod tests {
 
     use super::*;
     use crate::ports::Clock;
-    use crate::{
-        adapters::clock::FakeClock,
-        data::{DomainEventMeta, DomainEventPayload},
-    };
+    use crate::{adapters::clock::FakeClock, data::DomainEventMeta};
 
     #[test]
     fn test_importing_an_event_sorts_the_log() {

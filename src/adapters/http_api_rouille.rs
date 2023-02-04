@@ -1,8 +1,4 @@
-use crate::{
-    app,
-    data::{Bookmark, BookmarkQuery},
-    ports,
-};
+use crate::{app, ports};
 use rouille::{input::json_input, router, start_server, Response};
 use rust_embed::RustEmbed;
 use serde::{Deserialize, Serialize};
@@ -58,7 +54,7 @@ pub fn run(
         router!(
             req,
             (GET) (/api/bookmarks/{id: String}) => {
-                match app::query::read_bookmark(BookmarkQuery { id }, read_model.clone()) {
+                match app::read_bookmark(id.as_str(), read_model.clone()) {
                     Some(bookmark) => Response::json(&ReadResponse{
                         id: bookmark.id,
                         url: bookmark.url,
@@ -68,7 +64,7 @@ pub fn run(
                 }
             },
             (GET) (/api/bookmarks)=> {
-                match app::query::read_bookmarks(read_model.clone()) {
+                match app::read_bookmarks(read_model.clone()) {
                     Some(bookmarks) => Response::json(&ReadBookmarksResponse{
                         bookmarks: bookmarks.iter().map(|b| ReadBookmarksResponseBookmarkEntry {
                             id: b.id.clone(),
@@ -84,11 +80,14 @@ pub fn run(
                     Ok(data) => {
                         let id = Uuid::new_v4().to_string();
 
-                        app::command::create_bookmark(Bookmark {
-                            id: id.clone(),
-                            url: data.url,
-                            title: data.title
-                        }, event_store.clone(), read_model.clone(), clock.clone()).unwrap();
+                        app::create_bookmark(
+                            id.clone(),
+                            data.url,
+                            data.title,
+                            event_store.clone(),
+                            read_model.clone(),
+                            clock.clone()
+                        ).unwrap();
 
                         Response::json(&CreateResponse { id })
                     },
@@ -98,7 +97,7 @@ pub fn run(
             (PUT) (/api/bookmarks/{id:  String}/title) => {
                 match json_input::<UpdateTitleRequest>(req) {
                     Ok(data) => {
-                        app::command::update_bookmark_title(
+                        app::update_bookmark_title(
                             id,
                             data.title,
                             event_store.clone(),
@@ -111,7 +110,7 @@ pub fn run(
                 }
             },
             (DELETE) (/api/bookmarks/{id:  String}) => {
-                app::command::delete_bookmark(
+                app::delete_bookmark(
                     id,
                     event_store.clone(),
                     read_model.clone(),

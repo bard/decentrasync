@@ -37,6 +37,10 @@ impl EventStore for FileSystemEventStore {
 
         Ok(())
     }
+
+    fn get_events_for_aggregate(&self, _aggregate_id: String) -> Vec<DomainEvent> {
+        todo!();
+    }
 }
 
 #[cfg(test)]
@@ -46,7 +50,8 @@ mod tests {
     use std::time::Duration;
 
     use crate::adapters::clock::FakeClock;
-    use crate::data::{DomainEventMeta, DomainEventPayload};
+    use crate::data::DomainEventMeta;
+    use crate::domain::events::DomainEventPayload;
     use crate::ports::Clock;
 
     use super::*;

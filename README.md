@@ -14,3 +14,7 @@ Basic logic in place. Still lacks a physical log implementation.
 3. Each instance makes its log available to other instances whenever possible by sharing the folder with a synchronization tool (e.g. [Syncthing](https://syncthing.net/)) or even a simple USB stick.
 4. Each instance computes its own interpretation of the collective history by replaying events from all logs.
 5. Like in Event Sourcing, events are immutable, but contrary to it, new events can appear at any point in the timeline, rather than just its tail (e.g. an instance reconnects and shares events that were stored to the log while offline). This is similar to the real world, where previously unknown facts become known and lead to different "conclusions" (a different application state).
+
+##
+
+Synchronization strategies such as [CRDT](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type) strive to provide the illusion real-time concurrent editing.

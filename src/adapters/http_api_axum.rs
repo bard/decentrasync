@@ -1,8 +1,4 @@
-use crate::{
-    app,
-    data::{Bookmark, BookmarkQuery},
-    ports,
-};
+use crate::{app, data::DomainError, ports};
 use axum::{
     body::{self, Full},
     extract::{Path, State},
@@ -73,7 +69,7 @@ struct ReadBookmarksResponseBookmarkEntry {
 }
 
 async fn read_bookmarks(State(state): State<Arc<ServiceDependencies>>) -> impl IntoResponse {
-    match app::query::read_bookmarks(state.read_model.clone()) {
+    match app::read_bookmarks(state.read_model.clone()) {
         Some(bookmarks) => (
             StatusCode::OK,
             Json(ReadBookmarksResponse {
@@ -109,12 +105,10 @@ async fn create_bookmark(
 ) -> impl IntoResponse {
     let id = Uuid::new_v4().to_string();
 
-    match app::command::create_bookmark(
-        Bookmark {
-            id: id.clone(),
-            url: payload.url,
-            title: payload.title,
-        },
+    match app::create_bookmark(
+        id.clone(),
+        payload.url,
+        payload.title,
         state.event_store.clone(),
         state.read_model.clone(),
         state.clock.clone(),
@@ -138,7 +132,7 @@ async fn update_bookmark_title(
     Path(id): Path<String>,
     Json(payload): Json<UpdateBookmarkTitleRequestPayload>,
 ) -> impl IntoResponse {
-    match app::command::update_bookmark_title(
+    match app::update_bookmark_title(
         id,
         payload.title,
         state.event_store.clone(),
@@ -146,6 +140,7 @@ async fn update_bookmark_title(
         state.clock.clone(),
     ) {
         Ok(()) => (StatusCode::NO_CONTENT, ()).into_response(),
+        Err(DomainError::NoSuchBookmark) => (StatusCode::NOT_FOUND).into_response(),
         _ => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     }
 }
@@ -154,13 +149,14 @@ async fn delete_bookmark(
     State(state): State<Arc<ServiceDependencies>>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    match app::command::delete_bookmark(
+    match app::delete_bookmark(
         id,
         state.event_store.clone(),
         state.read_model.clone(),
         state.clock.clone(),
     ) {
         Ok(()) => (StatusCode::OK, ()).into_response(),
+        Err(DomainError::NoSuchBookmark) => (StatusCode::NO_CONTENT).into_response(),
         _ => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     }
 }
@@ -176,7 +172,7 @@ async fn read_bookmark(
     State(state): State<Arc<ServiceDependencies>>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    match app::query::read_bookmark(BookmarkQuery { id }, state.read_model.clone()) {
+    match app::read_bookmark(&id, state.read_model.clone()) {
         Some(bookmark) => (
             StatusCode::OK,
             Json(ReadBookmarkResponsePayload {
