@@ -37,10 +37,10 @@ pub fn delete_bookmark(
 
     event_store
         .store_event(event.clone())
-        .map_err(|_source| DomainError::GenericError)?;
+        .map_err(|_source| DomainError::PortError)?;
     read_model
         .update(&event)
-        .map_err(|_source| DomainError::GenericError)?;
+        .map_err(|_source| DomainError::PortError)?;
 
     Ok(())
 }
@@ -70,10 +70,10 @@ pub fn create_bookmark(
 
     event_store
         .store_event(event.clone())
-        .map_err(|_source| DomainError::GenericError)?;
+        .map_err(|_source| DomainError::PortError)?;
     read_model
         .update(&event)
-        .map_err(|_source| DomainError::GenericError)?;
+        .map_err(|_source| DomainError::PortError)?;
 
     Ok(())
 }
@@ -104,10 +104,10 @@ pub fn update_bookmark_title(
     // already validate
     event_store
         .store_event(event.clone())
-        .map_err(|_source| DomainError::GenericError)?;
+        .map_err(|_source| DomainError::PortError)?;
     read_model
         .update(&event)
-        .map_err(|_source| DomainError::GenericError)?;
+        .map_err(|_source| DomainError::PortError)?;
 
     Ok(())
 }

@@ -4,6 +4,6 @@ pub enum DomainError {
     NoSuchBookmark,
     #[error("Bookmark already exists")]
     BookmarkAlreadyExists,
-    #[error("Generic")]
-    GenericError,
+    #[error("Error interfacing with external system")]
+    PortError,
 }
