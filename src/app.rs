@@ -1,8 +1,11 @@
 use crate::{
     domain::aggregates::BookmarkAggregate,
     domain::commands::BookmarkCommand,
-    domain::data::{Aggregate, BookmarkData, DomainEvent, DomainEventMeta},
     domain::errors::DomainError,
+    domain::{
+        data::{Aggregate, BookmarkData, DomainEvent, DomainEventMeta},
+        events::DomainEventPayload,
+    },
     ports::{Clock, EventStore, ReadModel},
 };
 use std::sync::Arc;
@@ -24,17 +27,22 @@ pub fn delete_bookmark(
     let bookmark = event_store
         .get_events_for_aggregate(id.clone())
         .iter()
-        .fold(BookmarkAggregate::new(id.clone()), |aggr, ref evt| {
-            aggr.apply_event(evt)
-        });
+        .fold(
+            BookmarkAggregate::new(id.clone()),
+            |aggr, ref evt| match &evt.payload {
+                DomainEventPayload::Bookmark(payload) => aggr.apply_event(&payload, &evt.meta),
+                _ => aggr,
+            },
+        );
 
     let event_payload = bookmark.handle_command(&BookmarkCommand::Delete)?;
 
     let event = DomainEvent {
         meta: DomainEventMeta {
+            aggregate_id: id.clone(),
             created_at: clock.now(),
         },
-        payload: event_payload,
+        payload: DomainEventPayload::Bookmark(event_payload),
     };
 
     event_store
@@ -59,16 +67,20 @@ pub fn create_bookmark(
         .get_events_for_aggregate(id.clone())
         .iter()
         .fold(BookmarkAggregate::new(id.clone()), {
-            |aggr, ref evt| aggr.apply_event(evt)
+            |aggr, ref evt| match &evt.payload {
+                DomainEventPayload::Bookmark(payload) => aggr.apply_event(&payload, &evt.meta),
+                _ => aggr,
+            }
         });
 
     let event_payload = bookmark.handle_command(&BookmarkCommand::BookmarkPage { url, title })?;
 
     let event = DomainEvent {
         meta: DomainEventMeta {
+            aggregate_id: id.clone(),
             created_at: clock.now(),
         },
-        payload: event_payload,
+        payload: DomainEventPayload::Bookmark(event_payload),
     };
 
     event_store
@@ -91,17 +103,22 @@ pub fn update_bookmark_title(
     let bookmark = event_store
         .get_events_for_aggregate(id.clone())
         .iter()
-        .fold(BookmarkAggregate::new(id.clone()), |aggr, ref evt| {
-            aggr.apply_event(evt)
-        });
+        .fold(
+            BookmarkAggregate::new(id.clone()),
+            |aggr, ref evt| match &evt.payload {
+                DomainEventPayload::Bookmark(payload) => aggr.apply_event(&payload, &evt.meta),
+                _ => aggr,
+            },
+        );
 
     let event_payload = bookmark.handle_command(&BookmarkCommand::UpdateTitle { title })?;
 
     let event = DomainEvent {
         meta: DomainEventMeta {
+            aggregate_id: id.clone(),
             created_at: clock.now(),
         },
-        payload: event_payload,
+        payload: DomainEventPayload::Bookmark(event_payload),
     };
 
     // TODO no error should be returned here since command has been

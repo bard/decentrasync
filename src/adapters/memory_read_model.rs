@@ -19,14 +19,14 @@ impl ReadModel for MemoryReadModel {
         let mut bookmarks_by_id = self.bookmarks_by_id.lock().unwrap();
 
         match &event.payload {
-            DomainEventPayload::Bookmark(BookmarkEventPayload::Created { id, url, title }) => {
-                if bookmarks_by_id.contains_key(id) {
+            DomainEventPayload::Bookmark(BookmarkEventPayload::Created { url, title }) => {
+                if bookmarks_by_id.contains_key(&*event.meta.aggregate_id) {
                     Err(ReadModelError::Generic)
                 } else {
                     bookmarks_by_id.insert(
-                        id.to_string(),
+                        event.meta.aggregate_id.to_string(),
                         BookmarkData {
-                            id: id.to_string(),
+                            id: event.meta.aggregate_id.to_string(),
                             url: url.to_string(),
                             title: title.to_string(),
                         },
@@ -34,13 +34,13 @@ impl ReadModel for MemoryReadModel {
                     Ok(())
                 }
             }
-            DomainEventPayload::Bookmark(BookmarkEventPayload::Deleted { id }) => {
-                bookmarks_by_id.remove(id);
+            DomainEventPayload::Bookmark(BookmarkEventPayload::Deleted) => {
+                bookmarks_by_id.remove(&*event.meta.aggregate_id);
                 Ok(())
             }
-            DomainEventPayload::Bookmark(BookmarkEventPayload::TitleUpdated { id, title }) => {
+            DomainEventPayload::Bookmark(BookmarkEventPayload::TitleUpdated { title }) => {
                 bookmarks_by_id
-                    .entry(id.to_string())
+                    .entry(event.meta.aggregate_id.to_string())
                     .and_modify(|bookmark| {
                         *bookmark = BookmarkData {
                             id: bookmark.id.clone(),
@@ -83,12 +83,12 @@ mod tests {
         read_model
             .update(&DomainEvent {
                 meta: DomainEventMeta {
+                    aggregate_id: "123".to_owned(),
                     created_at: clock.now(),
                 },
                 payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
-                    id: String::from("123"),
-                    url: String::from("https://example.com"),
-                    title: String::from("Example"),
+                    url: "https://example.com".to_owned(),
+                    title: "Example".to_owned(),
                 }),
             })
             .unwrap();

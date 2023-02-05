@@ -22,12 +22,14 @@ pub struct DomainEvent {
 
 #[derive(std::fmt::Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct DomainEventMeta {
+    pub aggregate_id: String,
     pub created_at: SystemTime,
 }
 
 pub trait Aggregate {
     type Command;
+    type EventPayload;
 
-    fn apply_event(self, event: &DomainEvent) -> Self;
-    fn handle_command(&self, command: &Self::Command) -> Result<DomainEventPayload, DomainError>;
+    fn apply_event(self, event: &Self::EventPayload, meta: &DomainEventMeta) -> Self;
+    fn handle_command(&self, command: &Self::Command) -> Result<Self::EventPayload, DomainError>;
 }

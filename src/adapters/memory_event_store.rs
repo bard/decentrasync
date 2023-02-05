@@ -1,6 +1,5 @@
 use crate::{
     domain::data::DomainEvent,
-    domain::events::{BookmarkEventPayload, DomainEventPayload},
     ports::{EventStore, EventStoreError},
 };
 use std::sync::Mutex;
@@ -35,18 +34,7 @@ impl EventStore for MemoryEventStore {
             .lock()
             .unwrap()
             .iter()
-            .filter(|e| match &e.payload {
-                DomainEventPayload::Bookmark(BookmarkEventPayload::Created { id, .. }) => {
-                    *id == aggregate_id
-                }
-                DomainEventPayload::Bookmark(BookmarkEventPayload::Deleted { id }) => {
-                    *id == aggregate_id
-                }
-                DomainEventPayload::Bookmark(BookmarkEventPayload::TitleUpdated { id, .. }) => {
-                    *id == aggregate_id
-                }
-                _ => todo!(),
-            })
+            .filter(|e| *e.meta.aggregate_id == aggregate_id)
             .map(|e| e.clone())
             .collect()
     }
@@ -57,6 +45,7 @@ mod tests {
     use std::time::Duration;
 
     use super::*;
+    use crate::domain::events::{BookmarkEventPayload, DomainEventPayload};
     use crate::ports::Clock;
     use crate::{adapters::clock::FakeClock, domain::data::DomainEventMeta};
 
@@ -68,12 +57,12 @@ mod tests {
         let earlier_external_event_time = clock.now();
         let earlier_external_event = DomainEvent {
             meta: DomainEventMeta {
+                aggregate_id: "abc".to_owned(),
                 created_at: earlier_external_event_time,
             },
             payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
-                id: String::from("abc"),
-                url: String::from("https://google.com"),
-                title: String::from("Google"),
+                url: "https://google.com".to_owned(),
+                title: "Google".to_owned(),
             }),
         };
 
@@ -81,12 +70,12 @@ mod tests {
         let later_local_event_time = clock.now();
         let later_local_event = DomainEvent {
             meta: DomainEventMeta {
+                aggregate_id: "123".to_owned(),
                 created_at: later_local_event_time,
             },
             payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
-                id: String::from("123"),
-                url: String::from("https://example.com"),
-                title: String::from("Example"),
+                url: "https://example.com".to_owned(),
+                title: "Example".to_owned(),
             }),
         };
 

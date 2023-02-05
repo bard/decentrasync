@@ -1,8 +1,8 @@
 use super::{
     commands::BookmarkCommand,
-    data::{Aggregate, DomainEvent},
+    data::{Aggregate, DomainEventMeta},
     errors::DomainError,
-    events::{BookmarkEventPayload, DomainEventPayload},
+    events::BookmarkEventPayload,
 };
 
 enum State {
@@ -31,62 +31,56 @@ impl BookmarkAggregate {
 
 impl Aggregate for BookmarkAggregate {
     type Command = BookmarkCommand;
+    type EventPayload = BookmarkEventPayload;
 
-    fn handle_command(&self, command: &BookmarkCommand) -> Result<DomainEventPayload, DomainError> {
+    fn handle_command(&self, command: &Self::Command) -> Result<Self::EventPayload, DomainError> {
         match command {
             BookmarkCommand::BookmarkPage { url, title } => match self.state {
                 State::Deleted => Err(DomainError::NoSuchBookmark),
                 State::Created => Err(DomainError::BookmarkAlreadyExists),
-                State::Nonexistent => Ok(DomainEventPayload::Bookmark(
-                    BookmarkEventPayload::Created {
-                        id: self.id.clone(),
-                        url: url.clone(),
-                        title: title.clone(),
-                    },
-                )),
+                State::Nonexistent => Ok(BookmarkEventPayload::Created {
+                    url: url.clone(),
+                    title: title.clone(),
+                }),
             },
             BookmarkCommand::Delete => match self.state {
                 State::Deleted => Err(DomainError::NoSuchBookmark),
                 State::Nonexistent => Err(DomainError::NoSuchBookmark),
-                State::Created => Ok(DomainEventPayload::Bookmark(
-                    BookmarkEventPayload::Deleted {
-                        id: self.id.clone(),
-                    },
-                )),
+                State::Created => Ok(BookmarkEventPayload::Deleted),
             },
             BookmarkCommand::UpdateTitle { title } => match self.state {
                 State::Deleted => Err(DomainError::NoSuchBookmark),
                 State::Nonexistent => Err(DomainError::NoSuchBookmark),
-                State::Created => Ok(DomainEventPayload::Bookmark(
-                    BookmarkEventPayload::TitleUpdated {
-                        id: self.id.clone(),
-                        title: title.clone(),
-                    },
-                )),
+                State::Created => Ok(BookmarkEventPayload::TitleUpdated {
+                    title: title.clone(),
+                }),
             },
         }
     }
 
-    fn apply_event(mut self, event: &DomainEvent) -> BookmarkAggregate {
-        match &event.payload {
-            DomainEventPayload::Bookmark(BookmarkEventPayload::Created { id, url, title }) => {
-                if *id == self.id {
+    fn apply_event(
+        mut self,
+        payload: &BookmarkEventPayload,
+        meta: &DomainEventMeta,
+    ) -> BookmarkAggregate {
+        match &payload {
+            BookmarkEventPayload::Created { url, title } => {
+                if *meta.aggregate_id == self.id {
                     self.state = State::Created;
                     self.title = title.clone();
                     self.url = url.clone();
                 }
             }
-            DomainEventPayload::Bookmark(BookmarkEventPayload::Deleted { id }) => {
-                if *id == self.id {
+            BookmarkEventPayload::Deleted => {
+                if *meta.aggregate_id == self.id {
                     self.state = State::Deleted;
                 }
             }
-            DomainEventPayload::Bookmark(BookmarkEventPayload::TitleUpdated { id, title }) => {
-                if *id == self.id {
+            BookmarkEventPayload::TitleUpdated { title } => {
+                if *meta.aggregate_id == self.id {
                     self.title = title.clone();
                 }
             }
-            _ => (),
         }
         self
     }
@@ -101,24 +95,23 @@ mod tests {
     fn test_deleted_bookmark_cannot_be_acted_upon() {
         let clock = FakeClock::new();
         let bookmark = BookmarkAggregate::new("123456".to_owned());
-        let bookmark = bookmark.apply_event(&DomainEvent {
-            meta: DomainEventMeta {
-                created_at: clock.now(),
-            },
-            payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
-                id: "123456".to_owned(),
+        let bookmark = bookmark.apply_event(
+            &BookmarkEventPayload::Created {
                 url: "https://example.com".to_owned(),
                 title: "Example".to_owned(),
-            }),
-        });
-        let bookmark = bookmark.apply_event(&DomainEvent {
-            meta: DomainEventMeta {
+            },
+            &DomainEventMeta {
+                aggregate_id: "123456".to_owned(),
                 created_at: clock.now(),
             },
-            payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Deleted {
-                id: "123456".to_owned(),
-            }),
-        });
+        );
+        let bookmark = bookmark.apply_event(
+            &BookmarkEventPayload::Deleted,
+            &DomainEventMeta {
+                aggregate_id: "123456".to_owned(),
+                created_at: clock.now(),
+            },
+        );
 
         let err = bookmark
             .handle_command(&BookmarkCommand::UpdateTitle {
@@ -133,16 +126,16 @@ mod tests {
     fn test_bookmark_with_duplicate_id_cannot_be_created() {
         let clock = FakeClock::new();
         let bookmark = BookmarkAggregate::new("123456".to_owned());
-        let bookmark = bookmark.apply_event(&DomainEvent {
-            meta: DomainEventMeta {
-                created_at: clock.now(),
-            },
-            payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
-                id: "123456".to_owned(),
+        let bookmark = bookmark.apply_event(
+            &BookmarkEventPayload::Created {
                 url: "https://example.com".to_owned(),
                 title: "Example".to_owned(),
-            }),
-        });
+            },
+            &DomainEventMeta {
+                aggregate_id: "123456".to_owned(),
+                created_at: clock.now(),
+            },
+        );
 
         let err = bookmark
             .handle_command(&BookmarkCommand::BookmarkPage {
@@ -152,5 +145,25 @@ mod tests {
             .unwrap_err();
 
         assert_eq!(err, DomainError::BookmarkAlreadyExists)
+    }
+
+    #[test]
+    fn test_bookmarking_page_generates_create_event() {
+        let bookmark = BookmarkAggregate::new("123456".to_owned());
+
+        let event_payload = bookmark
+            .handle_command(&BookmarkCommand::BookmarkPage {
+                url: "https://example.com".to_owned(),
+                title: "Example".to_owned(),
+            })
+            .unwrap();
+
+        assert_eq!(
+            event_payload,
+            BookmarkEventPayload::Created {
+                url: "https://example.com".to_owned(),
+                title: "Example".to_owned(),
+            }
+        )
     }
 }

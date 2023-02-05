@@ -73,10 +73,10 @@ mod tests {
         clock.advance(Duration::from_secs(10));
         let event = DomainEvent {
             meta: DomainEventMeta {
+                aggregate_id: "123".to_string(),
                 created_at: clock.now(),
             },
             payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
-                id: "123".to_string(),
                 url: "https://example.com".to_string(),
                 title: "Example".to_string(),
             }),
@@ -88,15 +88,15 @@ mod tests {
         event_file.assert(
             r#"{
   "meta": {
+    "aggregate_id": "123",
     "created_at": {
       "secs_since_epoch": 10,
       "nanos_since_epoch": 0
     }
   },
   "payload": {
-    "aggregate": "Bookmark",
-    "type": "Created",
-    "id": "123",
+    "type": "bookmark",
+    "event": "created",
     "url": "https://example.com",
     "title": "Example"
   }
