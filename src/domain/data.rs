@@ -1,5 +1,5 @@
 use super::{errors::DomainError, events::DomainEventPayload};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 
 #[derive(std::fmt::Debug, PartialEq, Eq, Clone)]
@@ -14,13 +14,13 @@ pub struct BookmarkQuery {
     pub id: String,
 }
 
-#[derive(std::fmt::Debug, PartialEq, Eq, Clone, Serialize)]
+#[derive(std::fmt::Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct DomainEvent {
     pub meta: DomainEventMeta,
     pub payload: DomainEventPayload,
 }
 
-#[derive(std::fmt::Debug, PartialEq, Eq, Clone, Serialize)]
+#[derive(std::fmt::Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct DomainEventMeta {
     pub aggregate_id: String,
     pub created_at: SystemTime,
