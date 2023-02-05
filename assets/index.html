@@ -46,7 +46,7 @@
         flex: 1;
       }
       #bookmarks li > a[role="button"] {
-        margin-left: 1em;
+        margin-left: 0.5em;
         flex: 0;
       }
     </style>
@@ -64,11 +64,10 @@
             hx-target="#dialog-container"
             nunjucks-template="bookmark-create-tmpl"
             hx-get="/api/bookmarks"
-            class="outline contrast"
             href="#"
             role="button"
           >
-            <i class="bx bx-bookmark-plus"></i>
+            <i class="bx bx-plus"></i>
           </a>
         </h2>
         <div
@@ -133,7 +132,7 @@
           >
             <label for="url">
               URL
-              <input type="url" name="url" />
+              <input type="url" name="url" autofocus />
             </label>
             <label for="title">
               Title
