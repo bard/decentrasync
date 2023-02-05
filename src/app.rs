@@ -21,10 +21,12 @@ pub fn delete_bookmark(
     read_model: Arc<dyn ReadModel>,
     clock: Arc<dyn Clock>,
 ) -> Result<(), DomainError> {
-    let mut bookmark = BookmarkAggregate::new(id.clone());
-    for event in event_store.get_events_for_aggregate(id.clone()) {
-        bookmark.apply_event(&event);
-    }
+    let bookmark = event_store
+        .get_events_for_aggregate(id.clone())
+        .iter()
+        .fold(BookmarkAggregate::new(id.clone()), |aggr, ref evt| {
+            aggr.apply_event(evt)
+        });
 
     let event_payload = bookmark.handle_command(&BookmarkCommand::Delete)?;
 
@@ -53,13 +55,14 @@ pub fn create_bookmark(
     read_model: Arc<dyn ReadModel>,
     clock: Arc<dyn Clock>,
 ) -> Result<(), DomainError> {
-    let mut bookmark_aggregate = BookmarkAggregate::new(id.clone());
-    for event in event_store.get_events_for_aggregate(id.clone()) {
-        bookmark_aggregate.apply_event(&event);
-    }
+    let bookmark = event_store
+        .get_events_for_aggregate(id.clone())
+        .iter()
+        .fold(BookmarkAggregate::new(id.clone()), {
+            |aggr, ref evt| aggr.apply_event(evt)
+        });
 
-    let event_payload =
-        bookmark_aggregate.handle_command(&BookmarkCommand::BookmarkPage { url, title })?;
+    let event_payload = bookmark.handle_command(&BookmarkCommand::BookmarkPage { url, title })?;
 
     let event = DomainEvent {
         meta: DomainEventMeta {
@@ -85,13 +88,14 @@ pub fn update_bookmark_title(
     read_model: Arc<dyn ReadModel>,
     clock: Arc<dyn Clock>,
 ) -> Result<(), DomainError> {
-    let mut bookmark_aggregate = BookmarkAggregate::new(id.clone());
-    for event in event_store.get_events_for_aggregate(id.clone()) {
-        bookmark_aggregate.apply_event(&event);
-    }
+    let bookmark = event_store
+        .get_events_for_aggregate(id.clone())
+        .iter()
+        .fold(BookmarkAggregate::new(id.clone()), |aggr, ref evt| {
+            aggr.apply_event(evt)
+        });
 
-    let event_payload =
-        bookmark_aggregate.handle_command(&BookmarkCommand::UpdateTitle { title })?;
+    let event_payload = bookmark.handle_command(&BookmarkCommand::UpdateTitle { title })?;
 
     let event = DomainEvent {
         meta: DomainEventMeta {

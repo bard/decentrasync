@@ -28,6 +28,6 @@ pub struct DomainEventMeta {
 pub trait Aggregate {
     type Command;
 
-    fn apply_event(&mut self, event: &DomainEvent);
+    fn apply_event(self, event: &DomainEvent) -> Self;
     fn handle_command(&self, command: &Self::Command) -> Result<DomainEventPayload, DomainError>;
 }

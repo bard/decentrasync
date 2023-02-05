@@ -67,7 +67,7 @@ impl Aggregate for BookmarkAggregate {
         }
     }
 
-    fn apply_event(&mut self, event: &DomainEvent) {
+    fn apply_event(mut self, event: &DomainEvent) -> BookmarkAggregate {
         match &event.payload {
             DomainEventPayload::Bookmark(BookmarkEventPayload::Created { id, url, title }) => {
                 if *id == self.id {
@@ -88,6 +88,7 @@ impl Aggregate for BookmarkAggregate {
             }
             _ => (),
         }
+        self
     }
 }
 
@@ -98,9 +99,9 @@ mod tests {
 
     #[test]
     fn test_deleted_bookmark_cannot_be_acted_upon() {
-        let mut bookmark = BookmarkAggregate::new("123456".to_owned());
         let clock = FakeClock::new();
-        bookmark.apply_event(&DomainEvent {
+        let bookmark = BookmarkAggregate::new("123456".to_owned());
+        let bookmark = bookmark.apply_event(&DomainEvent {
             meta: DomainEventMeta {
                 created_at: clock.now(),
             },
@@ -110,7 +111,7 @@ mod tests {
                 title: "Example".to_owned(),
             }),
         });
-        bookmark.apply_event(&DomainEvent {
+        let bookmark = bookmark.apply_event(&DomainEvent {
             meta: DomainEventMeta {
                 created_at: clock.now(),
             },
@@ -130,9 +131,9 @@ mod tests {
 
     #[test]
     fn test_bookmark_with_duplicate_id_cannot_be_created() {
-        let mut bookmark = BookmarkAggregate::new("123456".to_owned());
         let clock = FakeClock::new();
-        bookmark.apply_event(&DomainEvent {
+        let bookmark = BookmarkAggregate::new("123456".to_owned());
+        let bookmark = bookmark.apply_event(&DomainEvent {
             meta: DomainEventMeta {
                 created_at: clock.now(),
             },
