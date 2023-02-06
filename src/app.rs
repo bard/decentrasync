@@ -10,6 +10,12 @@ use crate::{
 };
 use std::sync::Arc;
 
+pub fn init(event_store: Arc<dyn EventStore>, read_model: Arc<dyn ReadModel>) {
+    for event in event_store.events_iter() {
+        read_model.update(&event).unwrap(); // XXX handle error
+    }
+}
+
 pub fn read_bookmark(id: &str, read_model: Arc<dyn ReadModel>) -> Option<BookmarkData> {
     read_model.read_bookmark(id)
 }

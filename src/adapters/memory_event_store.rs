@@ -38,6 +38,10 @@ impl EventStore for MemoryEventStore {
             .map(|e| e.clone())
             .collect()
     }
+
+    fn events_iter(&self) -> Box<dyn Iterator<Item = DomainEvent>> {
+        todo!();
+    }
 }
 
 #[cfg(test)]

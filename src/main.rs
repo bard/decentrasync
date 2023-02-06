@@ -1,10 +1,12 @@
-use std::{net::SocketAddr, sync::Arc};
-
 use clap::Parser;
-use decentrasync::adapters::{
-    clock::SystemClock, http_api_axum, memory_event_store::MemoryEventStore,
-    memory_read_model::MemoryReadModel,
+use decentrasync::{
+    adapters::{
+        clock::SystemClock, file_event_store::FileSystemEventStore, http_api_axum,
+        memory_read_model::MemoryReadModel,
+    },
+    app,
 };
+use std::{env, net::SocketAddr, path::Path, sync::Arc};
 
 #[derive(Parser, Debug)]
 #[command(about)]
@@ -17,15 +19,18 @@ struct Args {
 async fn main() {
     let args = Args::parse();
     let addr = SocketAddr::from(([127, 0, 0, 1], args.port));
+    let log_folder_path = Path::new(&env::temp_dir()).join("decentrasync");
+
+    let event_store = Arc::new(FileSystemEventStore::new(log_folder_path.as_os_str()));
+    let read_model = Arc::new(MemoryReadModel::new());
+    let clock = Arc::new(SystemClock::new());
+
+    app::init(event_store.clone(), read_model.clone());
 
     axum::Server::bind(&addr)
         .serve(
-            http_api_axum::create_router(
-                Arc::new(MemoryEventStore::new()),
-                Arc::new(MemoryReadModel::new()),
-                Arc::new(SystemClock::new()),
-            )
-            .into_make_service(),
+            http_api_axum::create_router(event_store.clone(), read_model.clone(), clock.clone())
+                .into_make_service(),
         )
         .await
         .unwrap();

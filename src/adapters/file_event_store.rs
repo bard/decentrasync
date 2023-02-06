@@ -1,8 +1,9 @@
 use crate::{domain::data::DomainEvent, ports::EventStore, ports::EventStoreError};
 use std::{
+    collections::VecDeque,
     ffi::{OsStr, OsString},
     fs,
-    path::Path,
+    path::{Path, PathBuf},
     time::UNIX_EPOCH,
 };
 
@@ -14,6 +15,19 @@ impl FileSystemEventStore {
     pub fn new(path: &OsStr) -> Self {
         Self {
             log_folder_path: path.to_owned(),
+        }
+    }
+}
+
+impl Iterator for FilesystemEventStoreIterator {
+    type Item = DomainEvent;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.sorted_event_filenames.pop_front() {
+            Some(f) => {
+                Some(serde_json::from_str::<DomainEvent>(&fs::read_to_string(f).unwrap()).unwrap())
+            }
+            None => None,
         }
     }
 }
@@ -44,21 +58,33 @@ impl EventStore for FileSystemEventStore {
     }
 
     fn get_events_for_aggregate(&self, aggregate_id: String) -> Vec<DomainEvent> {
-        let mut entries = std::fs::read_dir(&self.log_folder_path)
-            .unwrap()
-            .map(|res| res.map(|e| e.path()))
-            .collect::<Result<Vec<_>, std::io::Error>>()
-            .unwrap();
-
-        entries.sort();
-
-        entries
-            .iter()
-            .map(|path| {
-                serde_json::from_str::<DomainEvent>(&fs::read_to_string(path).unwrap()).unwrap()
-            })
+        self.events_iter()
             .filter(|e| e.meta.aggregate_id == aggregate_id)
             .collect::<Vec<DomainEvent>>()
+    }
+
+    fn events_iter(&self) -> Box<dyn Iterator<Item = DomainEvent>> {
+        Box::new(FilesystemEventStoreIterator::new(&self.log_folder_path))
+    }
+}
+
+struct FilesystemEventStoreIterator {
+    sorted_event_filenames: VecDeque<PathBuf>,
+}
+
+impl FilesystemEventStoreIterator {
+    pub fn new(log_folder_path: &OsStr) -> Self {
+        let mut event_filenames = std::fs::read_dir(log_folder_path)
+            .unwrap()
+            .map(|res| res.map(|e| e.path()))
+            .collect::<Result<VecDeque<_>, std::io::Error>>()
+            .unwrap();
+
+        event_filenames.make_contiguous().sort_unstable();
+
+        Self {
+            sorted_event_filenames: event_filenames,
+        }
     }
 }
 
@@ -73,7 +99,7 @@ mod tests {
     use assert_fs::fixture::PathChild;
     use assert_fs::TempDir;
     use std::sync::Arc;
-    use std::time::Duration;
+    use std::time::{Duration, SystemTime};
 
     #[test]
     fn test_storing_an_event_writes_to_disk() {
@@ -119,10 +145,31 @@ mod tests {
     }
 
     #[test]
-    fn test_events_are_read_from_disk_upon_instantiation() {
+    fn test_entire_log_of_events_can_be_read_from_disk_on_demand() {
         let temp = TempDir::new().unwrap();
         let log_folder_path = temp.path().as_os_str();
+        let es = FileSystemEventStore::new(log_folder_path);
 
+        setup_sample_log(log_folder_path);
+
+        let events: Vec<DomainEvent> = es.events_iter().collect();
+        assert_eq!(2, events.len());
+        assert_eq!(
+            events.get(0).unwrap(),
+            &DomainEvent {
+                meta: DomainEventMeta {
+                    aggregate_id: "123".to_owned(),
+                    created_at: SystemTime::UNIX_EPOCH + Duration::from_secs(10)
+                },
+                payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
+                    url: "https://example.com".to_owned(),
+                    title: "Example".to_owned()
+                })
+            }
+        )
+    }
+
+    fn setup_sample_log(log_folder_path: &OsStr) {
         std::fs::write(
             Path::new(log_folder_path).join("10000.json"),
             r#"{
@@ -162,26 +209,5 @@ mod tests {
 }"#,
         )
         .unwrap();
-
-        let es = FileSystemEventStore::new(log_folder_path);
-        let events = es.get_events_for_aggregate("123".to_string());
-
-        let clock = FakeClock::new();
-        clock.advance(Duration::from_secs(10));
-
-        assert_eq!(1, events.len());
-        assert_eq!(
-            events.get(0).unwrap(),
-            &DomainEvent {
-                meta: DomainEventMeta {
-                    aggregate_id: "123".to_owned(),
-                    created_at: clock.now()
-                },
-                payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
-                    url: "https://example.com".to_string(),
-                    title: "Example".to_string()
-                })
-            }
-        )
     }
 }
