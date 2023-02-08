@@ -25,27 +25,24 @@ pub fn read_bookmarks(read_model: Arc<dyn ReadModel>) -> Option<Vec<BookmarkData
 }
 
 pub fn delete_bookmark(
-    id: String,
+    id: &str,
     event_store: Arc<dyn EventStore>,
     read_model: Arc<dyn ReadModel>,
     clock: Arc<dyn Clock>,
 ) -> Result<(), DomainError> {
-    let bookmark = event_store
-        .get_events_for_aggregate(id.clone())
-        .iter()
-        .fold(
-            BookmarkAggregate::new(id.clone()),
-            |aggr, ref evt| match &evt.payload {
-                DomainEventPayload::Bookmark(payload) => aggr.apply_event(&payload, &evt.meta),
-                _ => aggr,
-            },
-        );
+    let bookmark = event_store.get_events_for_aggregate(&id).iter().fold(
+        BookmarkAggregate::new(&id),
+        |aggr, ref evt| match &evt.payload {
+            DomainEventPayload::Bookmark(payload) => aggr.apply_event(&payload, &evt.meta),
+            _ => aggr,
+        },
+    );
 
     let event_payload = bookmark.handle_command(&BookmarkCommand::Delete)?;
 
     let event = DomainEvent {
         meta: DomainEventMeta {
-            aggregate_id: id.clone(),
+            aggregate_id: id.to_owned(),
             created_at: clock.now(),
         },
         payload: DomainEventPayload::Bookmark(event_payload),
@@ -62,28 +59,33 @@ pub fn delete_bookmark(
 }
 
 pub fn create_bookmark(
-    id: String,
-    url: String,
-    title: String,
+    id: &str,
+    url: &str,
+    title: &str,
     event_store: Arc<dyn EventStore>,
     read_model: Arc<dyn ReadModel>,
     clock: Arc<dyn Clock>,
 ) -> Result<(), DomainError> {
-    let bookmark = event_store
-        .get_events_for_aggregate(id.clone())
-        .iter()
-        .fold(BookmarkAggregate::new(id.clone()), {
-            |aggr, ref evt| match &evt.payload {
-                DomainEventPayload::Bookmark(payload) => aggr.apply_event(&payload, &evt.meta),
-                _ => aggr,
-            }
-        });
+    let bookmark =
+        event_store
+            .get_events_for_aggregate(&id)
+            .iter()
+            .fold(BookmarkAggregate::new(&id), {
+                |aggr, ref evt| match &evt.payload {
+                    DomainEventPayload::Bookmark(payload) => aggr.apply_event(&payload, &evt.meta),
+                    _ => aggr,
+                }
+            });
 
-    let event_payload = bookmark.handle_command(&BookmarkCommand::BookmarkPage { url, title })?;
+    let command = BookmarkCommand::BookmarkPage {
+        url: url.to_owned(),
+        title: title.to_owned(),
+    };
+    let event_payload = bookmark.handle_command(&command)?;
 
     let event = DomainEvent {
         meta: DomainEventMeta {
-            aggregate_id: id.clone(),
+            aggregate_id: id.to_owned(),
             created_at: clock.now(),
         },
         payload: DomainEventPayload::Bookmark(event_payload),
@@ -100,35 +102,35 @@ pub fn create_bookmark(
 }
 
 pub fn update_bookmark_title(
-    id: String,
-    title: String,
+    id: &str,
+    title: &str,
     event_store: Arc<dyn EventStore>,
     read_model: Arc<dyn ReadModel>,
     clock: Arc<dyn Clock>,
 ) -> Result<(), DomainError> {
-    let bookmark = event_store
-        .get_events_for_aggregate(id.clone())
-        .iter()
-        .fold(
-            BookmarkAggregate::new(id.clone()),
-            |aggr, ref evt| match &evt.payload {
-                DomainEventPayload::Bookmark(payload) => aggr.apply_event(&payload, &evt.meta),
-                _ => aggr,
-            },
-        );
+    let bookmark = event_store.get_events_for_aggregate(&id).iter().fold(
+        BookmarkAggregate::new(&id),
+        |aggr, ref evt| match &evt.payload {
+            DomainEventPayload::Bookmark(payload) => aggr.apply_event(&payload, &evt.meta),
+            _ => aggr,
+        },
+    );
 
-    let event_payload = bookmark.handle_command(&BookmarkCommand::UpdateTitle { title })?;
+    let command = BookmarkCommand::UpdateTitle {
+        title: title.to_owned(),
+    };
+    let event_payload = bookmark.handle_command(&command)?;
 
     let event = DomainEvent {
         meta: DomainEventMeta {
-            aggregate_id: id.clone(),
+            aggregate_id: id.to_owned(),
             created_at: clock.now(),
         },
         payload: DomainEventPayload::Bookmark(event_payload),
     };
 
     // TODO no error should be returned here since command has been
-    // already validate
+    // already validated
     event_store
         .store_event(event.clone())
         .map_err(|_source| DomainError::PortError)?;
@@ -157,9 +159,9 @@ mod tests {
         let clock = Arc::new(FakeClock::new());
 
         create_bookmark(
-            "123".to_string(),
-            "http://bar".to_string(),
-            "bar".to_string(),
+            "123",
+            "http://bar",
+            "bar",
             event_store.clone(),
             read_model.clone(),
             clock.clone(),
@@ -171,9 +173,9 @@ mod tests {
         assert_eq!(
             bookmark,
             BookmarkData {
-                id: "123".to_string(),
-                url: "http://bar".to_string(),
-                title: "bar".to_string(),
+                id: "123".to_owned(),
+                url: "http://bar".to_owned(),
+                title: "bar".to_owned(),
             }
         )
     }
@@ -185,9 +187,9 @@ mod tests {
         let clock = Arc::new(FakeClock::new());
 
         create_bookmark(
-            "123".to_string(),
-            "http://bar".to_string(),
-            "bar".to_string(),
+            "123",
+            "http://bar",
+            "bar",
             event_store.clone(),
             read_model.clone(),
             clock.clone(),
@@ -195,9 +197,9 @@ mod tests {
         .unwrap();
 
         create_bookmark(
-            "456".to_string(),
-            "http://foo".to_string(),
-            "foo".to_string(),
+            "456",
+            "http://foo",
+            "foo",
             event_store.clone(),
             read_model.clone(),
             clock.clone(),
@@ -205,8 +207,8 @@ mod tests {
         .unwrap();
 
         update_bookmark_title(
-            "456".to_string(),
-            "foobar".to_string(),
+            "456",
+            "foobar",
             event_store.clone(),
             read_model.clone(),
             clock.clone(),
@@ -228,9 +230,9 @@ mod tests {
         let clock = Arc::new(FakeClock::new());
 
         create_bookmark(
-            "123".to_string(),
-            "http://bar".to_string(),
-            "bar".to_string(),
+            "123",
+            "http://bar",
+            "bar",
             event_store.clone(),
             read_model.clone(),
             clock.clone(),
@@ -238,8 +240,8 @@ mod tests {
         .unwrap();
 
         update_bookmark_title(
-            "123".to_string(),
-            "foo".to_string(),
+            "123",
+            "foo",
             event_store.clone(),
             read_model.clone(),
             clock.clone(),
@@ -258,9 +260,9 @@ mod tests {
         let clock = Arc::new(FakeClock::new());
 
         create_bookmark(
-            "123".to_string(),
-            "http://bar".to_string(),
-            "bar".to_string(),
+            "123",
+            "http://bar",
+            "bar",
             event_store.clone(),
             read_model.clone(),
             clock.clone(),
@@ -268,7 +270,7 @@ mod tests {
         .unwrap();
 
         delete_bookmark(
-            "123".to_string(),
+            "123",
             event_store.clone(),
             read_model.clone(),
             clock.clone(),
@@ -287,7 +289,7 @@ mod tests {
         let clock = Arc::new(FakeClock::new());
 
         let err = delete_bookmark(
-            "123".to_string(),
+            "123",
             event_store.clone(),
             read_model.clone(),
             clock.clone(),

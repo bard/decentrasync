@@ -24,11 +24,11 @@ impl ReadModel for MemoryReadModel {
                     Err(ReadModelError::Generic)
                 } else {
                     bookmarks_by_id.insert(
-                        event.meta.aggregate_id.to_string(),
+                        event.meta.aggregate_id.to_owned(),
                         BookmarkData {
-                            id: event.meta.aggregate_id.to_string(),
-                            url: url.to_string(),
-                            title: title.to_string(),
+                            id: event.meta.aggregate_id.to_owned(),
+                            url: url.to_owned(),
+                            title: title.to_owned(),
                         },
                     );
                     Ok(())
@@ -40,7 +40,7 @@ impl ReadModel for MemoryReadModel {
             }
             DomainEventPayload::Bookmark(BookmarkEventPayload::TitleUpdated { title }) => {
                 bookmarks_by_id
-                    .entry(event.meta.aggregate_id.to_string())
+                    .entry(event.meta.aggregate_id.to_owned())
                     .and_modify(|bookmark| {
                         *bookmark = BookmarkData {
                             id: bookmark.id.clone(),

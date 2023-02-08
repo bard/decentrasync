@@ -57,7 +57,7 @@ impl EventStore for FileSystemEventStore {
         Ok(())
     }
 
-    fn get_events_for_aggregate(&self, aggregate_id: String) -> Vec<DomainEvent> {
+    fn get_events_for_aggregate(&self, aggregate_id: &str) -> Vec<DomainEvent> {
         self.events_iter()
             .filter(|e| e.meta.aggregate_id == aggregate_id)
             .collect::<Vec<DomainEvent>>()
@@ -111,12 +111,12 @@ mod tests {
         clock.advance(Duration::from_secs(10));
         let event = DomainEvent {
             meta: DomainEventMeta {
-                aggregate_id: "123".to_string(),
+                aggregate_id: "123".to_owned(),
                 created_at: clock.now(),
             },
             payload: DomainEventPayload::Bookmark(BookmarkEventPayload::Created {
-                url: "https://example.com".to_string(),
-                title: "Example".to_string(),
+                url: "https://example.com".to_owned(),
+                title: "Example".to_owned(),
             }),
         };
 

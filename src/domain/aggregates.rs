@@ -19,12 +19,12 @@ pub struct BookmarkAggregate {
 }
 
 impl BookmarkAggregate {
-    pub fn new(id: String) -> Self {
+    pub fn new(id: &str) -> Self {
         Self {
-            id,
+            id: id.to_owned(),
             state: State::Nonexistent,
-            title: "".to_string(),
-            url: "".to_string(),
+            title: "".to_owned(),
+            url: "".to_owned(),
         }
     }
 }
@@ -94,7 +94,7 @@ mod tests {
     #[test]
     fn test_deleted_bookmark_cannot_be_acted_upon() {
         let clock = FakeClock::new();
-        let bookmark = BookmarkAggregate::new("123456".to_owned());
+        let bookmark = BookmarkAggregate::new("123456");
         let bookmark = bookmark.apply_event(
             &BookmarkEventPayload::Created {
                 url: "https://example.com".to_owned(),
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn test_bookmark_with_duplicate_id_cannot_be_created() {
         let clock = FakeClock::new();
-        let bookmark = BookmarkAggregate::new("123456".to_owned());
+        let bookmark = BookmarkAggregate::new("123456");
         let bookmark = bookmark.apply_event(
             &BookmarkEventPayload::Created {
                 url: "https://example.com".to_owned(),
@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn test_bookmarking_page_generates_create_event() {
-        let bookmark = BookmarkAggregate::new("123456".to_owned());
+        let bookmark = BookmarkAggregate::new("123456");
 
         let event_payload = bookmark
             .handle_command(&BookmarkCommand::BookmarkPage {

@@ -29,12 +29,12 @@ impl EventStore for MemoryEventStore {
         Ok(())
     }
 
-    fn get_events_for_aggregate(&self, aggregate_id: String) -> Vec<DomainEvent> {
+    fn get_events_for_aggregate(&self, aggregate_id: &str) -> Vec<DomainEvent> {
         self.events
             .lock()
             .unwrap()
             .iter()
-            .filter(|e| *e.meta.aggregate_id == aggregate_id)
+            .filter(|e| e.meta.aggregate_id == aggregate_id)
             .map(|e| e.clone())
             .collect()
     }

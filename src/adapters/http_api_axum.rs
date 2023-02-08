@@ -106,9 +106,9 @@ async fn create_bookmark(
     let id = Uuid::new_v4().to_string();
 
     match app::create_bookmark(
-        id.clone(),
-        payload.url,
-        payload.title,
+        &id,
+        &payload.url,
+        &payload.title,
         state.event_store.clone(),
         state.read_model.clone(),
         state.clock.clone(),
@@ -133,8 +133,8 @@ async fn update_bookmark_title(
     Json(payload): Json<UpdateBookmarkTitleRequestPayload>,
 ) -> impl IntoResponse {
     match app::update_bookmark_title(
-        id,
-        payload.title,
+        &id,
+        &payload.title,
         state.event_store.clone(),
         state.read_model.clone(),
         state.clock.clone(),
@@ -150,7 +150,7 @@ async fn delete_bookmark(
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     match app::delete_bookmark(
-        id,
+        &id,
         state.event_store.clone(),
         state.read_model.clone(),
         state.clock.clone(),

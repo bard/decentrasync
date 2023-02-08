@@ -4,7 +4,7 @@ use std::time::SystemTime;
 pub trait EventStore: Send + Sync {
     fn store_event(&self, event: DomainEvent) -> Result<(), EventStoreError>;
     fn import_event(&self, event: DomainEvent) -> Result<(), EventStoreError>;
-    fn get_events_for_aggregate(&self, aggregate_id: String) -> Vec<DomainEvent>;
+    fn get_events_for_aggregate(&self, aggregate_id: &str) -> Vec<DomainEvent>;
     fn events_iter(&self) -> Box<dyn Iterator<Item = DomainEvent>>;
 }
 
